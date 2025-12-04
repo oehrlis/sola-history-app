@@ -1,0 +1,15 @@
+name: Task
+description: Generic implementation task
+labels: ["task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: When is this done?

@@ -1,0 +1,5 @@
+# Add Python dependencies here
+streamlit==1.39.0
+pandas==2.2.2
+altair==5.3.0
+fpdf==1.7.2

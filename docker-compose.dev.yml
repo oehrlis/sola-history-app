@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  sola-history:
+    build: .
+    container_name: sola-history-dev
+    ports:
+      - "8501:8501"
+    environment:
+      - SOLA_APP_PASSWORD=dev
+      - SOLA_DATA_BUCKET=local-dev
+      - SOLA_DATA_NAMESPACE=
+    volumes:
+      - .:/app

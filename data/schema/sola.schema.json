@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sola Schema Placeholder",
+  "description": "Placeholder JSON schema for sola-history-app data.",
+  "type": "object",
+  "properties": {}
+}
