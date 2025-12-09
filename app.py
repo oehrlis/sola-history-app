@@ -97,8 +97,7 @@ RUNNER_OVERRIDES_FILE: Path = DATA_DIR / "runners_overrides.json"
 LOCALES_DIR: Path = BASE_DIR / "locales"
 
 # Supported languages for UI
-SUPPORTED_LANGS: list[str] = ["en", "de"]
-
+SUPPORTED_LANGS: list[str] = ["en", "de", "ch", "pirate"]
 
 # ==============================================================================
 # AUTHENTICATION
