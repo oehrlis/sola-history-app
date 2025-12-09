@@ -131,7 +131,7 @@ def check_password() -> None:
 
     if "password_ok" not in st.session_state:
         st.text_input(
-            "Password",
+            t("password_label"),
             type="password",
             on_change=password_entered,
             key="password",
@@ -139,12 +139,12 @@ def check_password() -> None:
         st.stop()
     elif not st.session_state["password_ok"]:
         st.text_input(
-            "Password",
+            t("password_label"),
             type="password",
             on_change=password_entered,
             key="password",
         )
-        st.error("Incorrect password.")
+        st.error(t("password_incorrect"))
         st.stop()
 
 
@@ -360,9 +360,9 @@ def apply_runner_filter(df: pd.DataFrame, mode: str) -> pd.DataFrame:
     if "active" not in df.columns:
         return df
 
-    if mode == "Active only":
+    if mode == t("filter_runners_active"):
         return df[df["active"] == True]
-    if mode == "Inactive only":
+    if mode == t("filter_runners_inactive"):
         return df[df["active"] == False]
     return df
 
@@ -611,28 +611,290 @@ def load_data() -> Optional[Dict[str, pd.DataFrame]]:
 # UI text strings for supported languages
 STRINGS: Dict[str, Dict[str, str]] = {
     "en": {
+        # Application
         "app_title": "🏃‍♂️ Sola History - Internal Analytics",
+        "page_title": "Sola History",
+        "language_selector": "Language / Sprache",
+        
+        # Authentication
+        "password_label": "Password",
+        "password_incorrect": "Incorrect password.",
+        
+        # Tabs
         "tab_year": "📅 Year overview",
         "tab_runner": "👤 Runner details",
         "tab_overview": "👥 Runner overview",
         "tab_highlights": "⭐ Highlights & charts",
         "tab_planning": "🗓 Planning (draft)",
         "tab_admin": "⚙️ Admin",
+        
+        # Sidebar - Filters
         "sidebar_filters": "Filters",
-        "sidebar_runners": "Runners",
-        "password_incorrect": "Incorrect password.",
+        "filter_runners": "Runners",
+        "filter_runners_all": "All",
+        "filter_runners_active": "Active only",
+        "filter_runners_inactive": "Inactive only",
+        "filter_runners_help": "Applies to runner lists, overview, highlights and planning.",
+        "filter_year": "Year (for Year view)",
+        "filter_team": "Team (for Year view)",
+        "filter_runner_year": "Runner (for Year view)",
+        "option_all_teams": "(all teams)",
+        "option_all_runners": "(all runners)",
+        
+        # Errors
+        "error_load_data": "Could not load data. Please check data/processed/*.json.",
+        "error_missing_file": "Missing data file",
+        "error_invalid_json": "Invalid JSON in",
+        "error_loading": "Error loading",
+        "error_save_overrides": "Failed to save overrides",
+        
+        # Year Tab
+        "year_overview_title": "Year overview",
+        "metric_teams": "Teams",
+        "metric_runners": "Runners",
+        "metric_stages": "Stages",
+        "metric_distance": "Total km",
+        "metric_avg_pace": "Avg. Pace",
+        "charts_title": "### Charts",
+        "chart_stage_distances": "Stage distances",
+        "chart_team_ranks": "Team rank per stage",
+        "info_no_stage_data": "No stage data for this year.",
+        "info_no_team_rank_data": "No team rank data for this year / team.",
+        "info_select_team": "Please select a specific team above to see the team rank progression.",
+        "results_title": "### Results - individual & team after each stage",
+        
+        # Runner Tab
+        "runner_details_title": "Runner details - all years",
+        "select_runner": "Select runner",
+        "runner_profile_title": "### Runner profile",
+        "runner_first_participation": "**First participation:**",
+        "runner_last_participation": "**Last participation:**",
+        "runner_total_runs": "**Total runs:**",
+        "runner_teams": "**Teams:**",
+        "runner_years": "**Years:**",
+        "runner_companies": "**Companies:**",
+        "info_no_runs": "No runs found for this runner.",
+        "runner_chart_pace_title": "Pace development over years",
+        "runner_chart_distance_title": "Total distance per year",
+        "runner_all_runs_title": "### All runs of this runner",
+        
+        # Overview Tab
+        "overview_title": "Runner overview - all years",
+        "overview_total_runners": "Total runners",
+        "overview_active_runners": "Active",
+        "overview_inactive_runners": "Inactive",
+        "overview_avg_runs": "Avg. runs/runner",
+        
+        # Highlights Tab
+        "highlights_title": "Highlights - all years",
+        "highlights_most_runs": "Most runs",
+        "highlights_most_km": "Most km",
+        "highlights_fastest_avg": "Fastest avg. pace",
+        "info_no_top10_results": "No top-10 individual stage results found.",
+        "info_no_pace_data": "No pace data available.",
+        
+        # Planning Tab
+        "planning_title": "Planning (draft) - assignments & timing",
+        "planning_year": "Plan for year",
+        "planning_template_year": "Template year (stages & distances from)",
+        "planning_race_date": "Race date",
+        "planning_start_time": "Initial team start time",
+        "planning_team_info": "Team information",
+        "planning_team_name": "Team name",
+        "planning_company": "Company",
+        "planning_bib_number": "Bib number (optional)",
+        "planning_bib_help": "Bib number will only be final on race day.",
+        "info_no_stages_template": "No stages found for the template year.",
+        "planning_stage_assignments": "Stage assignments (with optional restarts)",
+        "planning_pace": "Pace (seconds per km)",
+        "planning_restart_here": "Restart here",
+        "planning_restart_help": "If checked, a new absolute start time is used for this stage and all following stages.",
+        "planning_restart_time": "Restart time",
+        "planning_schedule_title": "Planned race schedule (draft)",
+        "planning_checklist_title": "Planning checklist",
+        "checklist_runners_assigned": "All stages have a runner assigned",
+        "checklist_paces_realistic": "All paces are realistic",
+        "checklist_restart_verified": "All restart times are verified",
+        "checklist_runners_informed": "All runners know their start times",
+        "checklist_logistics_clarified": "Transport / logistics between stages is clarified",
+        "checklist_contact_ready": "Contact list for race day is ready",
+        "planning_export_title": "Export planning",
+        "download_csv": "Download CSV",
+        "download_excel": "Download Excel",
+        "download_pdf": "Download PDF",
+        "info_pdf_install": "PDF export: install `fpdf` in requirements.txt to enable.",
+        
+        # Admin Tab
+        "admin_title": "Admin - maintain runner meta data",
+        "admin_info_overrides": "Changes in this tab are stored as overrides in `data/processed/runners_overrides.json` and applied on top of `runners.json`. The Excel source files remain unchanged.",
+        "admin_select_runner": "Select runner to edit",
+        "please_select": "(please select)",
+        "error_runner_not_found": "Runner not found in data frame.",
+        "admin_active": "Active",
+        "admin_default_pace": "Default pace (seconds per km)",
+        "admin_preferred_distance": "Preferred distance",
+        "admin_favorite_stage": "Favourite stage",
+        "admin_gender": "Gender",
+        "admin_birth_year": "Birth year",
+        "admin_company": "Company",
+        "admin_email": "Email",
+        "admin_mobile": "Mobile",
+        "admin_street": "Street",
+        "admin_zip_code": "ZIP code",
+        "admin_city": "City",
+        "admin_country": "Country",
+        "admin_tshirt_size": "T-Shirt size",
+        "admin_food_preference": "Food preference",
+        "admin_notes": "Notes (override)",
+        "admin_save_button": "Save changes",
+        "admin_save_success": "Runner overrides saved. They will be applied on next reload.",
+        "admin_rerun_info": "To force an immediate reload, use 'Rerun' in the Streamlit menu.",
+        "admin_export_title": "Export runner overrides",
+        "info_no_overrides": "No overrides found yet.",
+        "admin_download_overrides": "Download overrides as CSV",
     },
     "de": {
+        # Application
         "app_title": "🏃‍♂️ Sola History - Interne Auswertungen",
+        "page_title": "Sola History",
+        "language_selector": "Language / Sprache",
+        
+        # Authentication
+        "password_label": "Passwort",
+        "password_incorrect": "Falsches Passwort.",
+        
+        # Tabs
         "tab_year": "📅 Jahresübersicht",
         "tab_runner": "👤 Läuferdetails",
         "tab_overview": "👥 Läufer-Übersicht",
         "tab_highlights": "⭐ Highlights & Grafiken",
         "tab_planning": "🗓 Planung (Entwurf)",
         "tab_admin": "⚙️ Admin",
+        
+        # Sidebar - Filters
         "sidebar_filters": "Filter",
-        "sidebar_runners": "Läufer:innen",
-        "password_incorrect": "Falsches Passwort.",
+        "filter_runners": "Läufer:innen",
+        "filter_runners_all": "Alle",
+        "filter_runners_active": "Nur Aktive",
+        "filter_runners_inactive": "Nur Inaktive",
+        "filter_runners_help": "Gilt für Läuferlisten, Übersicht, Highlights und Planung.",
+        "filter_year": "Jahr (für Jahresansicht)",
+        "filter_team": "Team (für Jahresansicht)",
+        "filter_runner_year": "Läufer (für Jahresansicht)",
+        "option_all_teams": "(alle Teams)",
+        "option_all_runners": "(alle Läufer)",
+        
+        # Errors
+        "error_load_data": "Daten konnten nicht geladen werden. Bitte data/processed/*.json prüfen.",
+        "error_missing_file": "Fehlende Datendatei",
+        "error_invalid_json": "Ungültiges JSON in",
+        "error_loading": "Fehler beim Laden",
+        "error_save_overrides": "Fehler beim Speichern der Überschreibungen",
+        
+        # Year Tab
+        "year_overview_title": "Jahresübersicht",
+        "metric_teams": "Teams",
+        "metric_runners": "Läufer",
+        "metric_stages": "Etappen",
+        "metric_distance": "Gesamt km",
+        "metric_avg_pace": "Ø Tempo",
+        "charts_title": "### Grafiken",
+        "chart_stage_distances": "Etappendistanzen",
+        "chart_team_ranks": "Teamrang pro Etappe",
+        "info_no_stage_data": "Keine Etappendaten für dieses Jahr.",
+        "info_no_team_rank_data": "Keine Teamrang-Daten für dieses Jahr / Team.",
+        "info_select_team": "Bitte wählen Sie oben ein bestimmtes Team aus, um die Teamrang-Entwicklung zu sehen.",
+        "results_title": "### Ergebnisse - Individuell & Team nach jeder Etappe",
+        
+        # Runner Tab
+        "runner_details_title": "Läuferdetails - alle Jahre",
+        "select_runner": "Läufer auswählen",
+        "runner_profile_title": "### Läuferprofil",
+        "runner_first_participation": "**Erste Teilnahme:**",
+        "runner_last_participation": "**Letzte Teilnahme:**",
+        "runner_total_runs": "**Gesamt Läufe:**",
+        "runner_teams": "**Teams:**",
+        "runner_years": "**Jahre:**",
+        "runner_companies": "**Firmen:**",
+        "info_no_runs": "Keine Läufe für diesen Läufer gefunden.",
+        "runner_chart_pace_title": "Tempoentwicklung über Jahre",
+        "runner_chart_distance_title": "Gesamtdistanz pro Jahr",
+        "runner_all_runs_title": "### Alle Läufe dieses Läufers",
+        
+        # Overview Tab
+        "overview_title": "Läufer-Übersicht - alle Jahre",
+        "overview_total_runners": "Gesamt Läufer",
+        "overview_active_runners": "Aktiv",
+        "overview_inactive_runners": "Inaktiv",
+        "overview_avg_runs": "Ø Läufe/Läufer",
+        
+        # Highlights Tab
+        "highlights_title": "Highlights - alle Jahre",
+        "highlights_most_runs": "Meiste Läufe",
+        "highlights_most_km": "Meiste km",
+        "highlights_fastest_avg": "Schnellstes Ø Tempo",
+        "info_no_top10_results": "Keine Top-10 individuellen Etappenergebnisse gefunden.",
+        "info_no_pace_data": "Keine Tempodaten verfügbar.",
+        
+        # Planning Tab
+        "planning_title": "Planung (Entwurf) - Zuordnungen & Zeitplanung",
+        "planning_year": "Planung für Jahr",
+        "planning_template_year": "Vorlagenjahr (Etappen & Distanzen von)",
+        "planning_race_date": "Renndatum",
+        "planning_start_time": "Initiale Team-Startzeit",
+        "planning_team_info": "Team-Informationen",
+        "planning_team_name": "Teamname",
+        "planning_company": "Firma",
+        "planning_bib_number": "Startnummer (optional)",
+        "planning_bib_help": "Die Startnummer wird erst am Renntag final.",
+        "info_no_stages_template": "Keine Etappen für das Vorlagenjahr gefunden.",
+        "planning_stage_assignments": "Etappenzuweisungen (mit optionalen Neustarts)",
+        "planning_pace": "Tempo (Sekunden pro km)",
+        "planning_restart_here": "Hier neu starten",
+        "planning_restart_help": "Falls aktiviert, wird für diese und alle folgenden Etappen eine neue absolute Startzeit verwendet.",
+        "planning_restart_time": "Neustart-Zeit",
+        "planning_schedule_title": "Geplanter Rennablauf (Entwurf)",
+        "planning_checklist_title": "Planungs-Checkliste",
+        "checklist_runners_assigned": "Alle Etappen haben einen Läufer zugewiesen",
+        "checklist_paces_realistic": "Alle Tempos sind realistisch",
+        "checklist_restart_verified": "Alle Neustart-Zeiten sind verifiziert",
+        "checklist_runners_informed": "Alle Läufer kennen ihre Startzeiten",
+        "checklist_logistics_clarified": "Transport / Logistik zwischen Etappen ist geklärt",
+        "checklist_contact_ready": "Kontaktliste für den Renntag ist bereit",
+        "planning_export_title": "Planung exportieren",
+        "download_csv": "CSV herunterladen",
+        "download_excel": "Excel herunterladen",
+        "download_pdf": "PDF herunterladen",
+        "info_pdf_install": "PDF-Export: Installieren Sie `fpdf` in requirements.txt, um dies zu aktivieren.",
+        
+        # Admin Tab
+        "admin_title": "Admin - Läufer-Metadaten pflegen",
+        "admin_info_overrides": "Änderungen in diesem Tab werden als Überschreibungen in `data/processed/runners_overrides.json` gespeichert und auf `runners.json` angewendet. Die Excel-Quelldateien bleiben unverändert.",
+        "admin_select_runner": "Läufer zur Bearbeitung auswählen",
+        "please_select": "(bitte auswählen)",
+        "error_runner_not_found": "Läufer nicht im Datenframe gefunden.",
+        "admin_active": "Aktiv",
+        "admin_default_pace": "Standard-Tempo (Sekunden pro km)",
+        "admin_preferred_distance": "Bevorzugte Distanz",
+        "admin_favorite_stage": "Lieblingsetappe",
+        "admin_gender": "Geschlecht",
+        "admin_birth_year": "Geburtsjahr",
+        "admin_company": "Firma",
+        "admin_email": "E-Mail",
+        "admin_mobile": "Mobiltelefon",
+        "admin_street": "Straße",
+        "admin_zip_code": "PLZ",
+        "admin_city": "Stadt",
+        "admin_country": "Land",
+        "admin_tshirt_size": "T-Shirt-Größe",
+        "admin_food_preference": "Essenspräferenz",
+        "admin_notes": "Notizen (Überschreibung)",
+        "admin_save_button": "Änderungen speichern",
+        "admin_save_success": "Läufer-Überschreibungen gespeichert. Sie werden beim nächsten Neuladen angewendet.",
+        "admin_rerun_info": "Um ein sofortiges Neuladen zu erzwingen, verwenden Sie 'Rerun' im Streamlit-Menü.",
+        "admin_export_title": "Läufer-Überschreibungen exportieren",
+        "info_no_overrides": "Noch keine Überschreibungen gefunden.",
+        "admin_download_overrides": "Überschreibungen als CSV herunterladen",
     },
 }
 
@@ -715,14 +977,14 @@ def main() -> None:
         Run via command line:
         $ streamlit run app.py
     """
-    st.set_page_config(page_title="Sola History", layout="wide")
+    st.set_page_config(page_title=t("page_title"), layout="wide")
     check_password()
 
     # Language selection in sidebar (small select)
     with st.sidebar:
         lang_default = get_lang()
         lang = st.selectbox(
-            "Language / Sprache",
+            t("language_selector"),
             options=SUPPORTED_LANGS,
             format_func=lambda x: "English" if x == "en" else "Deutsch",
             index=SUPPORTED_LANGS.index(lang_default),
@@ -733,7 +995,7 @@ def main() -> None:
             
     data = load_data()
     if data is None:
-        st.error("Could not load data. Please check data/processed/*.json.")
+        st.error(t("error_load_data"))
         return
 
     races_df = data["races"]
@@ -749,10 +1011,10 @@ def main() -> None:
 
     # Global runner filter
     runner_filter_mode = st.sidebar.radio(
-        "Runners",
-        options=["All", "Active only", "Inactive only"],
+        t("filter_runners"),
+        options=[t("filter_runners_all"), t("filter_runners_active"), t("filter_runners_inactive")],
         index=0,
-        help="Applies to runner lists, overview, highlights and planning.",
+        help=t("filter_runners_help"),
     )
 
     # Year filter (for Year view) - default = newest year
@@ -763,7 +1025,7 @@ def main() -> None:
         default_year_index = 0
 
     selected_year = st.sidebar.selectbox(
-        "Year (for Year view)", years, index=default_year_index if years else 0
+        t("filter_year"), years, index=default_year_index if years else 0
     )
 
     # Pre-filtered DF for the selected year (for sidebar)
@@ -775,11 +1037,11 @@ def main() -> None:
         .drop_duplicates()
         .sort_values("team_name")
     )
-    team_options = ["(all teams)"] + [
+    team_options = [t("option_all_teams")] + [
         f"{row['team_name']} (#{row['team_id'].split('-')[-1]})"
         for _, row in teams_in_year.iterrows()
     ]
-    selected_team_label = st.sidebar.selectbox("Team (for Year view)", team_options)
+    selected_team_label = st.sidebar.selectbox(t("filter_team"), team_options)
 
     # Runner selector (Year view only, independent from global active filter)
     runners_in_year = (
@@ -787,12 +1049,12 @@ def main() -> None:
         .drop_duplicates()
         .sort_values(["last_name", "first_name"])
     )
-    runner_options_year = ["(all runners)"] + [
+    runner_options_year = [t("option_all_runners")] + [
         f"{row['first_name']} {row['last_name']} ({row['runner_id']})"
         for _, row in runners_in_year.iterrows()
     ]
     selected_runner_label_year = st.sidebar.selectbox(
-        "Runner (for Year view)",
+        t("filter_runner_year"),
         runner_options_year,
     )
 
@@ -822,17 +1084,17 @@ def main() -> None:
     # TAB: Year overview
     # -------------------------------------------------------------------
     with tab_year:
-        st.subheader(f"Year overview - {selected_year}")
+        st.subheader(f"{t('year_overview_title')} - {selected_year}")
 
         year_df = merged[merged["year"] == selected_year].copy()
 
         # Apply team filter (Year tab only)
-        if selected_team_label != "(all teams)":
+        if selected_team_label != t("option_all_teams"):
             team_suffix = selected_team_label.split("#")[-1].rstrip(")")
             year_df = year_df[year_df["team_id"].str.endswith(team_suffix)]
 
         # Apply runner filter (Year tab only)
-        if selected_runner_label_year != "(all runners)":
+        if selected_runner_label_year != t("option_all_runners"):
             rid = selected_runner_label_year.split("(")[-1].rstrip(")")
             year_df = year_df[year_df["runner_id"] == rid]
 
@@ -845,12 +1107,12 @@ def main() -> None:
         avg_pace = valid_paces.mean() if not valid_paces.empty else None
 
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Teams", num_teams)
-        c2.metric("Runners", num_runners)
-        c3.metric("Stages", num_legs)
-        c4.metric("Total distance", f"{total_km:.1f} km")
+        c1.metric(t("metric_teams"), num_teams)
+        c2.metric(t("metric_runners"), num_runners)
+        c3.metric(t("metric_stages"), num_legs)
+        c4.metric(t("metric_distance"), f"{total_km:.1f} km")
         c5.metric(
-            "Avg. individual pace",
+            t("metric_avg_pace"),
             format_pace(avg_pace) if avg_pace else "-",
         )
 
@@ -860,13 +1122,13 @@ def main() -> None:
                 f"Total of {int(num_teams_total[0])} teams were registered in {selected_year}."
             )
 
-        st.markdown("### Charts")
+        st.markdown(t("charts_title"))
 
         col_chart1, col_chart2 = st.columns(2)
 
         # Distance per leg
         with col_chart1:
-            st.caption("Stage distances")
+            st.caption(t("chart_stage_distances"))
             dist_per_leg = (
                 year_df[["leg_number", "leg_name", "distance_km"]]
                 .drop_duplicates()
@@ -884,11 +1146,11 @@ def main() -> None:
                 )
                 st.altair_chart(chart, use_container_width=True)
             else:
-                st.info("No stage data for this year.")
+                st.info(t("info_no_stage_data"))
 
         # Team rank over legs (if exactly one team selected)
         with col_chart2:
-            st.caption("Team rank progression over stages")
+            st.caption(t("chart_team_ranks"))
             teams_in_filtered = year_df["team_id"].nunique()
             if teams_in_filtered == 1:
                 rank_df = (
@@ -912,13 +1174,11 @@ def main() -> None:
                     )
                     st.altair_chart(chart, use_container_width=True)
                 else:
-                    st.info("No team rank data for this year / team.")
+                    st.info(t("info_no_team_rank_data"))
             else:
-                st.info(
-                    "Please select a single team in the sidebar to show the rank progression."
-                )
+                st.info(t("info_select_team"))
 
-        st.markdown("### Results - individual & team after each stage")
+        st.markdown(t("results_title"))
 
         table_df = pd.DataFrame()
         table_df["Year"] = year_df["year"].astype("int").astype("string")
@@ -957,7 +1217,7 @@ def main() -> None:
     # TAB: Runner details
     # -------------------------------------------------------------------
     with tab_runner:
-        st.subheader("Runner details - all years")
+        st.subheader(t("runner_details_title"))
 
         # Apply global active filter to runner list
         runners_filtered = apply_runner_filter(runners_df, runner_filter_mode)
@@ -972,7 +1232,7 @@ def main() -> None:
         ]
 
         selected_runner_label = st.selectbox(
-            "Select runner",
+            t("select_runner"),
             ["(please select)"] + runner_options_global,
         )
 
@@ -982,7 +1242,7 @@ def main() -> None:
                 runners_df["runner_id"] == selected_runner_id
             ].iloc[0]
 
-            st.markdown("### Runner profile")
+            st.markdown(t("runner_profile_title"))
 
             col_a, col_b = st.columns(2)
 
@@ -1055,7 +1315,7 @@ def main() -> None:
             # All runs of this runner
             runner_runs = merged[merged["runner_id"] == selected_runner_id].copy()
             if runner_runs.empty:
-                st.info("No runs found for this runner.")
+                st.info(t("info_no_runs"))
             else:
                 # Stats
                 total_runs = runner_runs["leg_id"].nunique()
@@ -1109,7 +1369,7 @@ def main() -> None:
                     )
 
                 # All runs table (newest year first)
-                st.markdown("### All runs of this runner")
+                st.markdown(t("runner_all_runs_title"))
 
                 runner_runs_sorted = runner_runs.sort_values(
                     ["year", "leg_number"], ascending=[False, True]
@@ -1144,7 +1404,7 @@ def main() -> None:
     # TAB: Runner overview
     # -------------------------------------------------------------------
     with tab_overview:
-        st.subheader("Runner overview - all years")
+        st.subheader(t("overview_title"))
 
         results_all = merged.copy()
         results_all = apply_runner_filter(results_all, runner_filter_mode)
@@ -1212,7 +1472,7 @@ def main() -> None:
     # TAB: Highlights & charts
     # -------------------------------------------------------------------
     with tab_highlights:
-        st.subheader("Highlights - all years")
+        st.subheader(t("highlights_title"))
 
         results_all = merged.copy()
         results_all = apply_runner_filter(results_all, runner_filter_mode)
@@ -1316,7 +1576,7 @@ def main() -> None:
         ].copy()
 
         if top10_results.empty:
-            st.info("No top-10 individual stage results found.")
+            st.info(t("info_no_top10_results"))
         else:
             top10_summary = (
                 top10_results.groupby("runner_id")
@@ -1353,7 +1613,7 @@ def main() -> None:
         fastest = results_all[results_all["ind_pace_sec_per_km"].notna()].copy()
 
         if fastest.empty:
-            st.info("No pace data available.")
+            st.info(t("info_no_pace_data"))
         else:
             fastest = fastest.nsmallest(10, "ind_pace_sec_per_km")
             fast_table = pd.DataFrame()
@@ -1379,7 +1639,7 @@ def main() -> None:
     # TAB: Planning (draft)
     # -------------------------------------------------------------------
     with tab_planning:
-        st.subheader("Planning (draft) - assignments & timing")
+        st.subheader(t("planning_title"))
 
         years_existing = sorted(races_df["year"].unique())
         last_year = years_existing[-1] if years_existing else date.today().year
@@ -1398,7 +1658,7 @@ def main() -> None:
             )
         with col_y2:
             template_year = st.selectbox(
-                "Template year (stages & distances from)",
+                t("planning_template_year"),
                 years_existing,
                 index=len(years_existing) - 1 if years_existing else 0,
             )
@@ -1408,12 +1668,12 @@ def main() -> None:
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             race_date = st.date_input(
-                "Race date",
+                t("planning_race_date"),
                 value=date(int(planned_year), 5, 1),
             )
         with col_p2:
             race_start_time = st.time_input(
-                "Initial team start time",
+                t("planning_start_time"),
                 value=time(7, 30),
             )
 
@@ -1423,18 +1683,18 @@ def main() -> None:
         )
 
         # Free team definition (no dependency on existing teams)
-        st.markdown("### Team information")
+        st.markdown(f"### {t('planning_team_info')}")
 
         col_t1, col_t2, col_t3 = st.columns(3)
         with col_t1:
-            team_name_plan = st.text_input("Team name", value="Optimizers")
+            team_name_plan = st.text_input(t("planning_team_name"), value="Optimizers")
         with col_t2:
-            company_plan = st.text_input("Company", value="Accenture")
+            company_plan = st.text_input(t("planning_company"), value="Accenture")
         with col_t3:
             bib_plan = st.text_input(
-                "Bib number (optional)",
+                t("planning_bib_number"),
                 value="",
-                help="Bib number will only be final on race day.",
+                help=t("planning_bib_help"),
             )
 
         legs_plan = (
@@ -1444,7 +1704,7 @@ def main() -> None:
         )
 
         if legs_plan.empty:
-            st.info("No stages found for the template year.")
+            st.info(t("info_no_stages_template"))
         else:
             # Runner list for planning (respecting active filter)
             runners_for_plan = apply_runner_filter(runners_df, runner_filter_mode)
@@ -1457,7 +1717,7 @@ def main() -> None:
                 for _, row in runners_for_plan.iterrows()
             ]
 
-            st.markdown("### Stage assignments (with optional restarts)")
+            st.markdown(f"### {t('planning_stage_assignments')}")
 
             base_start_dt = datetime.combine(race_date, race_start_time)
             cumulative_sec = 0.0
@@ -1482,7 +1742,7 @@ def main() -> None:
                 with col_l2:
                     default_pace_sec = 360
                     pace_input = st.number_input(
-                        "Pace (seconds per km)",
+                        t("planning_pace"),
                         min_value=150,
                         max_value=720,
                         value=default_pace_sec,
@@ -1491,17 +1751,14 @@ def main() -> None:
                     )
                 with col_l3:
                     restart_here = st.checkbox(
-                        "Restart here",
+                        t("planning_restart_here"),
                         key=f"plan_restart_{team_key_base}_{leg_num}",
-                        help=(
-                            "If checked, a new absolute start time is used for "
-                            "this stage and all following stages."
-                        ),
+                        help=t("planning_restart_help"),
                     )
                     restart_time = None
                     if restart_here:
                         restart_time = st.time_input(
-                            "Restart time",
+                            t("planning_restart_time"),
                             value=race_start_time,
                             key=f"plan_restart_time_{team_key_base}_{leg_num}",
                         )
@@ -1537,20 +1794,20 @@ def main() -> None:
                 )
 
             # ---------- ab hier NACH der Schleife ----------
-            st.markdown("### Planned race schedule (draft)")
+            st.markdown(f"### {t('planning_schedule_title')}")
 
             plan_df = pd.DataFrame(plan_rows)
             st.dataframe(plan_df, use_container_width=True)
 
-            st.markdown("### Planning checklist")
+            st.markdown(f"### {t('planning_checklist_title')}")
 
             checklist_items = [
-                "All stages have a runner assigned",
-                "All paces are realistic",
-                "All restart times are verified",
-                "All runners know their start times",
-                "Transport / logistics between stages is clarified",
-                "Contact list for race day is ready",
+                t("checklist_runners_assigned"),
+                t("checklist_paces_realistic"),
+                t("checklist_restart_verified"),
+                t("checklist_runners_informed"),
+                t("checklist_logistics_clarified"),
+                t("checklist_contact_ready"),
             ]
 
             # einfache Session-State-Checkliste
@@ -1566,7 +1823,7 @@ def main() -> None:
                 )
                 st.session_state["planning_checklist"][item] = checked
 
-            st.markdown("### Export planning")
+            st.markdown(f"### {t('planning_export_title')}")
 
             col_exp1, col_exp2, col_exp3 = st.columns(3)
 
@@ -1574,7 +1831,7 @@ def main() -> None:
             csv_bytes = plan_df.to_csv(index=False).encode("utf-8")
             with col_exp1:
                 st.download_button(
-                    "Download CSV",
+                    t("download_csv"),
                     data=csv_bytes,
                     file_name=f"sola_plan_{int(planned_year)}_{team_name_plan.replace(' ', '_')}.csv",
                     mime="text/csv",
@@ -1586,7 +1843,7 @@ def main() -> None:
             excel_buffer.seek(0)
             with col_exp2:
                 st.download_button(
-                    "Download Excel",
+                    t("download_excel"),
                     data=excel_buffer,
                     file_name=f"sola_plan_{int(planned_year)}_{team_name_plan.replace(' ', '_')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1600,27 +1857,21 @@ def main() -> None:
                         title=f"SOLA Plan {int(planned_year)} - {team_name_plan}",
                     )
                     st.download_button(
-                        "Download PDF",
+                        t("download_pdf"),
                         data=pdf_bytes,
                         file_name=f"sola_plan_{int(planned_year)}_{team_name_plan.replace(' ', '_')}.pdf",
                         mime="application/pdf",
                     )
                 else:
-                    st.caption(
-                        "PDF export: install `fpdf` in requirements.txt to enable."
-                    )
+                    st.caption(t("info_pdf_install"))
 
     # -------------------------------------------------------------------
     # TAB: Admin
     # -------------------------------------------------------------------
     with tab_admin:
-        st.subheader("Admin - maintain runner meta data")
+        st.subheader(t("admin_title"))
 
-        st.info(
-            "Changes in this tab are stored as overrides in "
-            "`data/processed/runners_overrides.json` and applied on top of "
-            "`runners.json`. The Excel source files remain unchanged."
-        )
+        st.info(t("admin_info_overrides"))
 
         runners_filtered = apply_runner_filter(runners_df, runner_filter_mode)
         runners_sorted = (
@@ -1634,15 +1885,15 @@ def main() -> None:
         ]
 
         selected_runner_admin = st.selectbox(
-            "Select runner to edit",
-            ["(please select)"] + runner_options_admin,
+            t("admin_select_runner"),
+            [t("please_select")] + runner_options_admin,
         )
 
-        if selected_runner_admin != "(please select)":
+        if selected_runner_admin != t("please_select"):
             rid = selected_runner_admin.split("(")[-1].rstrip(")")
             runner_row = runners_df[runners_df["runner_id"] == rid]
             if runner_row.empty:
-                st.error("Runner not found in data frame.")
+                st.error(t("error_runner_not_found"))
             else:
                 r = runner_row.iloc[0]
 
@@ -1666,12 +1917,12 @@ def main() -> None:
                     # -------------------------------
                     with col1:
                         active = st.checkbox(
-                            "Active",
+                            t("admin_active"),
                             value=bool(ov("active", r.get("active", True))),
                         )
 
                         default_pace_sec = st.number_input(
-                            "Default pace (seconds per km)",
+                            t("admin_default_pace"),
                             min_value=150,
                             max_value=900,
                             value=int(
@@ -1694,7 +1945,7 @@ def main() -> None:
                         if pref_dist_current not in pref_dist_options:
                             pref_dist_current = ""
                         preferred_distance = st.selectbox(
-                            "Preferred distance",
+                            t("admin_preferred_distance"),
                             options=pref_dist_options,
                             index=pref_dist_options.index(pref_dist_current),
                         )
@@ -1710,7 +1961,7 @@ def main() -> None:
                         if fav_stage_current not in fav_stage_options:
                             fav_stage_current = ""
                         favorite_stage = st.selectbox(
-                            "Favourite stage",
+                            t("admin_favorite_stage"),
                             options=fav_stage_options,
                             index=fav_stage_options.index(fav_stage_current),
                         )
@@ -1725,7 +1976,7 @@ def main() -> None:
                         if gender_current_norm not in gender_options:
                             gender_current_norm = ""
                         gender = st.selectbox(
-                            "Gender",
+                            t("admin_gender"),
                             options=gender_options,
                             index=gender_options.index(gender_current_norm),
                         )
@@ -1740,7 +1991,7 @@ def main() -> None:
                             birth_year_val = 0
 
                         birth_year = st.number_input(
-                            "Birth year",
+                            t("admin_birth_year"),
                             min_value=0,
                             max_value=2100,
                             value=birth_year_val,
@@ -1752,32 +2003,32 @@ def main() -> None:
                     # -----------------------------------------
                     with col2:
                         company = st.text_input(
-                            "Company",
+                            t("admin_company"),
                             value=str(ov("company", r.get("company") or "")),
                         )
                         email = st.text_input(
-                            "Email",
+                            t("admin_email"),
                             value=str(ov("email", r.get("email") or "")),
                         )
                         mobile = st.text_input(
-                            "Mobile",
+                            t("admin_mobile"),
                             value=str(ov("mobile", r.get("mobile") or "")),
                         )
 
                         street = st.text_input(
-                            "Street",
+                            t("admin_street"),
                             value=str(ov("street", r.get("street") or "")),
                         )
                         zip_code = st.text_input(
-                            "ZIP code",
+                            t("admin_zip_code"),
                             value=str(ov("zip_code", r.get("zip_code") or "")),
                         )
                         city = st.text_input(
-                            "City",
+                            t("admin_city"),
                             value=str(ov("city", r.get("city") or "")),
                         )
                         country = st.text_input(
-                            "Country",
+                            t("admin_country"),
                             value=str(ov("country", r.get("country") or "")),
                         )
 
@@ -1789,7 +2040,7 @@ def main() -> None:
                         if tshirt_current not in tshirt_options:
                             tshirt_current = ""
                         tshirt_size = st.selectbox(
-                            "T-Shirt size",
+                            t("admin_tshirt_size"),
                             options=tshirt_options,
                             index=tshirt_options.index(tshirt_current),
                         )
@@ -1802,17 +2053,17 @@ def main() -> None:
                         if food_current_raw not in food_options:
                             food_current_raw = ""
                         food_preference = st.selectbox(
-                            "Food preference",
+                            t("admin_food_preference"),
                             options=food_options,
                             index=food_options.index(food_current_raw),
                         )
 
                         notes = st.text_area(
-                            "Notes (override)",
+                            t("admin_notes"),
                             value=str(ov("notes", r.get("notes") or "")),
                         )
 
-                    submitted = st.form_submit_button("Save changes")
+                    submitted = st.form_submit_button(t("admin_save_button"))
 
                 if submitted:
                     # 0 as birth year => treat as None
@@ -1837,23 +2088,19 @@ def main() -> None:
                         "notes": notes or None,
                     }
                     save_runner_overrides(overrides)
-                    st.success(
-                        "Runner overrides saved. They will be applied on next reload."
-                    )
-                    st.info(
-                        "To force an immediate reload, use 'Rerun' in the Streamlit menu."
-                    )
+                    st.success(t("admin_save_success"))
+                    st.info(t("admin_rerun_info"))
 
         # ---- Export-Section IMMER sichtbar (unabhängig vom selected_runner_admin) ----
-        st.markdown("### Export runner overrides")
+        st.markdown(f"### {t('admin_export_title')}")
 
         export_df = build_overrides_export_df(runners_df)
         if export_df.empty:
-            st.caption("No overrides found yet.")
+            st.caption(t("info_no_overrides"))
         else:
             csv_ov = export_df.to_csv(index=False).encode("utf-8")
             st.download_button(
-                "Download overrides as CSV",
+                t("admin_download_overrides"),
                 data=csv_ov,
                 file_name="runner_overrides.csv",
                 mime="text/csv",
