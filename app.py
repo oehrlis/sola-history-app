@@ -93,6 +93,9 @@ APP_PASSWORD: str = os.environ.get("SOLA_APP_PASSWORD", "sola")
 # Runner overrides file for runtime modifications
 RUNNER_OVERRIDES_FILE: Path = DATA_DIR / "runners_overrides.json"
 
+# Locales directory for translation files
+LOCALES_DIR: Path = BASE_DIR / "locales"
+
 # Supported languages for UI
 SUPPORTED_LANGS: list[str] = ["en", "de"]
 
@@ -608,293 +611,65 @@ def load_data() -> Optional[Dict[str, pd.DataFrame]]:
 # INTERNATIONALIZATION (i18n)
 # ==============================================================================
 
-# UI text strings for supported languages
-STRINGS: Dict[str, Dict[str, str]] = {
+@st.cache_data
+def load_translations() -> Dict[str, Dict[str, str]]:
+    """
+    Load translation files from locales directory.
+
+    Loads JSON translation files for all supported languages.
+    Uses Streamlit caching for performance.
+
+    Returns:
+        Dictionary mapping language codes to translation dictionaries
+        Falls back to empty dict for each language if file not found
+
+    Example:
+        >>> translations = load_translations()
+        >>> 'en' in translations
+        True
+        >>> 'app_title' in translations['en']
+        True
+    """
+    translations: Dict[str, Dict[str, str]] = {}
+    
+    for lang in SUPPORTED_LANGS:
+        locale_file = LOCALES_DIR / f"{lang}.json"
+        if not locale_file.exists():
+            logger.warning(f"Translation file not found: {locale_file}")
+            translations[lang] = {}
+            continue
+        
+        try:
+            with locale_file.open(encoding="utf-8") as f:
+                translations[lang] = json.load(f)
+            logger.info(f"Loaded {len(translations[lang])} translations for '{lang}'")
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {locale_file}: {e}")
+            translations[lang] = {}
+        except Exception as e:
+            logger.error(f"Error loading {locale_file}: {e}")
+            translations[lang] = {}
+    
+    return translations
+
+
+# Fallback translations for critical keys (if JSON files missing)
+_FALLBACK_STRINGS: Dict[str, Dict[str, str]] = {
     "en": {
-        # Application
         "app_title": "🏃‍♂️ Sola History - Internal Analytics",
         "page_title": "Sola History",
         "language_selector": "Language / Sprache",
-        
-        # Authentication
         "password_label": "Password",
         "password_incorrect": "Incorrect password.",
-        
-        # Tabs
-        "tab_year": "📅 Year overview",
-        "tab_runner": "👤 Runner details",
-        "tab_overview": "👥 Runner overview",
-        "tab_highlights": "⭐ Highlights & charts",
-        "tab_planning": "🗓 Planning (draft)",
-        "tab_admin": "⚙️ Admin",
-        
-        # Sidebar - Filters
-        "sidebar_filters": "Filters",
-        "filter_runners": "Runners",
-        "filter_runners_all": "All",
-        "filter_runners_active": "Active only",
-        "filter_runners_inactive": "Inactive only",
-        "filter_runners_help": "Applies to runner lists, overview, highlights and planning.",
-        "filter_year": "Year (for Year view)",
-        "filter_team": "Team (for Year view)",
-        "filter_runner_year": "Runner (for Year view)",
-        "option_all_teams": "(all teams)",
-        "option_all_runners": "(all runners)",
-        
-        # Errors
         "error_load_data": "Could not load data. Please check data/processed/*.json.",
-        "error_missing_file": "Missing data file",
-        "error_invalid_json": "Invalid JSON in",
-        "error_loading": "Error loading",
-        "error_save_overrides": "Failed to save overrides",
-        
-        # Year Tab
-        "year_overview_title": "Year overview",
-        "metric_teams": "Teams",
-        "metric_runners": "Runners",
-        "metric_stages": "Stages",
-        "metric_distance": "Total km",
-        "metric_avg_pace": "Avg. Pace",
-        "charts_title": "### Charts",
-        "chart_stage_distances": "Stage distances",
-        "chart_team_ranks": "Team rank per stage",
-        "info_no_stage_data": "No stage data for this year.",
-        "info_no_team_rank_data": "No team rank data for this year / team.",
-        "info_select_team": "Please select a specific team above to see the team rank progression.",
-        "results_title": "### Results - individual & team after each stage",
-        
-        # Runner Tab
-        "runner_details_title": "Runner details - all years",
-        "select_runner": "Select runner",
-        "runner_profile_title": "### Runner profile",
-        "runner_first_participation": "**First participation:**",
-        "runner_last_participation": "**Last participation:**",
-        "runner_total_runs": "**Total runs:**",
-        "runner_teams": "**Teams:**",
-        "runner_years": "**Years:**",
-        "runner_companies": "**Companies:**",
-        "info_no_runs": "No runs found for this runner.",
-        "runner_chart_pace_title": "Pace development over years",
-        "runner_chart_distance_title": "Total distance per year",
-        "runner_all_runs_title": "### All runs of this runner",
-        
-        # Overview Tab
-        "overview_title": "Runner overview - all years",
-        "overview_total_runners": "Total runners",
-        "overview_active_runners": "Active",
-        "overview_inactive_runners": "Inactive",
-        "overview_avg_runs": "Avg. runs/runner",
-        
-        # Highlights Tab
-        "highlights_title": "Highlights - all years",
-        "highlights_most_runs": "Most runs",
-        "highlights_most_km": "Most km",
-        "highlights_fastest_avg": "Fastest avg. pace",
-        "info_no_top10_results": "No top-10 individual stage results found.",
-        "info_no_pace_data": "No pace data available.",
-        
-        # Planning Tab
-        "planning_title": "Planning (draft) - assignments & timing",
-        "planning_year": "Plan for year",
-        "planning_template_year": "Template year (stages & distances from)",
-        "planning_race_date": "Race date",
-        "planning_start_time": "Initial team start time",
-        "planning_team_info": "Team information",
-        "planning_team_name": "Team name",
-        "planning_company": "Company",
-        "planning_bib_number": "Bib number (optional)",
-        "planning_bib_help": "Bib number will only be final on race day.",
-        "info_no_stages_template": "No stages found for the template year.",
-        "planning_stage_assignments": "Stage assignments (with optional restarts)",
-        "planning_pace": "Pace (seconds per km)",
-        "planning_restart_here": "Restart here",
-        "planning_restart_help": "If checked, a new absolute start time is used for this stage and all following stages.",
-        "planning_restart_time": "Restart time",
-        "planning_schedule_title": "Planned race schedule (draft)",
-        "planning_checklist_title": "Planning checklist",
-        "checklist_runners_assigned": "All stages have a runner assigned",
-        "checklist_paces_realistic": "All paces are realistic",
-        "checklist_restart_verified": "All restart times are verified",
-        "checklist_runners_informed": "All runners know their start times",
-        "checklist_logistics_clarified": "Transport / logistics between stages is clarified",
-        "checklist_contact_ready": "Contact list for race day is ready",
-        "planning_export_title": "Export planning",
-        "download_csv": "Download CSV",
-        "download_excel": "Download Excel",
-        "download_pdf": "Download PDF",
-        "info_pdf_install": "PDF export: install `fpdf` in requirements.txt to enable.",
-        
-        # Admin Tab
-        "admin_title": "Admin - maintain runner meta data",
-        "admin_info_overrides": "Changes in this tab are stored as overrides in `data/processed/runners_overrides.json` and applied on top of `runners.json`. The Excel source files remain unchanged.",
-        "admin_select_runner": "Select runner to edit",
-        "please_select": "(please select)",
-        "error_runner_not_found": "Runner not found in data frame.",
-        "admin_active": "Active",
-        "admin_default_pace": "Default pace (seconds per km)",
-        "admin_preferred_distance": "Preferred distance",
-        "admin_favorite_stage": "Favourite stage",
-        "admin_gender": "Gender",
-        "admin_birth_year": "Birth year",
-        "admin_company": "Company",
-        "admin_email": "Email",
-        "admin_mobile": "Mobile",
-        "admin_street": "Street",
-        "admin_zip_code": "ZIP code",
-        "admin_city": "City",
-        "admin_country": "Country",
-        "admin_tshirt_size": "T-Shirt size",
-        "admin_food_preference": "Food preference",
-        "admin_notes": "Notes (override)",
-        "admin_save_button": "Save changes",
-        "admin_save_success": "Runner overrides saved. They will be applied on next reload.",
-        "admin_rerun_info": "To force an immediate reload, use 'Rerun' in the Streamlit menu.",
-        "admin_export_title": "Export runner overrides",
-        "info_no_overrides": "No overrides found yet.",
-        "admin_download_overrides": "Download overrides as CSV",
     },
     "de": {
-        # Application
         "app_title": "🏃‍♂️ Sola History - Interne Auswertungen",
         "page_title": "Sola History",
         "language_selector": "Language / Sprache",
-        
-        # Authentication
         "password_label": "Passwort",
         "password_incorrect": "Falsches Passwort.",
-        
-        # Tabs
-        "tab_year": "📅 Jahresübersicht",
-        "tab_runner": "👤 Läuferdetails",
-        "tab_overview": "👥 Läufer-Übersicht",
-        "tab_highlights": "⭐ Highlights & Grafiken",
-        "tab_planning": "🗓 Planung (Entwurf)",
-        "tab_admin": "⚙️ Admin",
-        
-        # Sidebar - Filters
-        "sidebar_filters": "Filter",
-        "filter_runners": "Läufer:innen",
-        "filter_runners_all": "Alle",
-        "filter_runners_active": "Nur Aktive",
-        "filter_runners_inactive": "Nur Inaktive",
-        "filter_runners_help": "Gilt für Läuferlisten, Übersicht, Highlights und Planung.",
-        "filter_year": "Jahr (für Jahresansicht)",
-        "filter_team": "Team (für Jahresansicht)",
-        "filter_runner_year": "Läufer (für Jahresansicht)",
-        "option_all_teams": "(alle Teams)",
-        "option_all_runners": "(alle Läufer)",
-        
-        # Errors
         "error_load_data": "Daten konnten nicht geladen werden. Bitte data/processed/*.json prüfen.",
-        "error_missing_file": "Fehlende Datendatei",
-        "error_invalid_json": "Ungültiges JSON in",
-        "error_loading": "Fehler beim Laden",
-        "error_save_overrides": "Fehler beim Speichern der Überschreibungen",
-        
-        # Year Tab
-        "year_overview_title": "Jahresübersicht",
-        "metric_teams": "Teams",
-        "metric_runners": "Läufer",
-        "metric_stages": "Etappen",
-        "metric_distance": "Gesamt km",
-        "metric_avg_pace": "Ø Tempo",
-        "charts_title": "### Grafiken",
-        "chart_stage_distances": "Etappendistanzen",
-        "chart_team_ranks": "Teamrang pro Etappe",
-        "info_no_stage_data": "Keine Etappendaten für dieses Jahr.",
-        "info_no_team_rank_data": "Keine Teamrang-Daten für dieses Jahr / Team.",
-        "info_select_team": "Bitte wählen Sie oben ein bestimmtes Team aus, um die Teamrang-Entwicklung zu sehen.",
-        "results_title": "### Ergebnisse - Individuell & Team nach jeder Etappe",
-        
-        # Runner Tab
-        "runner_details_title": "Läuferdetails - alle Jahre",
-        "select_runner": "Läufer auswählen",
-        "runner_profile_title": "### Läuferprofil",
-        "runner_first_participation": "**Erste Teilnahme:**",
-        "runner_last_participation": "**Letzte Teilnahme:**",
-        "runner_total_runs": "**Gesamt Läufe:**",
-        "runner_teams": "**Teams:**",
-        "runner_years": "**Jahre:**",
-        "runner_companies": "**Firmen:**",
-        "info_no_runs": "Keine Läufe für diesen Läufer gefunden.",
-        "runner_chart_pace_title": "Tempoentwicklung über Jahre",
-        "runner_chart_distance_title": "Gesamtdistanz pro Jahr",
-        "runner_all_runs_title": "### Alle Läufe dieses Läufers",
-        
-        # Overview Tab
-        "overview_title": "Läufer-Übersicht - alle Jahre",
-        "overview_total_runners": "Gesamt Läufer",
-        "overview_active_runners": "Aktiv",
-        "overview_inactive_runners": "Inaktiv",
-        "overview_avg_runs": "Ø Läufe/Läufer",
-        
-        # Highlights Tab
-        "highlights_title": "Highlights - alle Jahre",
-        "highlights_most_runs": "Meiste Läufe",
-        "highlights_most_km": "Meiste km",
-        "highlights_fastest_avg": "Schnellstes Ø Tempo",
-        "info_no_top10_results": "Keine Top-10 individuellen Etappenergebnisse gefunden.",
-        "info_no_pace_data": "Keine Tempodaten verfügbar.",
-        
-        # Planning Tab
-        "planning_title": "Planung (Entwurf) - Zuordnungen & Zeitplanung",
-        "planning_year": "Planung für Jahr",
-        "planning_template_year": "Vorlagenjahr (Etappen & Distanzen von)",
-        "planning_race_date": "Renndatum",
-        "planning_start_time": "Initiale Team-Startzeit",
-        "planning_team_info": "Team-Informationen",
-        "planning_team_name": "Teamname",
-        "planning_company": "Firma",
-        "planning_bib_number": "Startnummer (optional)",
-        "planning_bib_help": "Die Startnummer wird erst am Renntag final.",
-        "info_no_stages_template": "Keine Etappen für das Vorlagenjahr gefunden.",
-        "planning_stage_assignments": "Etappenzuweisungen (mit optionalen Neustarts)",
-        "planning_pace": "Tempo (Sekunden pro km)",
-        "planning_restart_here": "Hier neu starten",
-        "planning_restart_help": "Falls aktiviert, wird für diese und alle folgenden Etappen eine neue absolute Startzeit verwendet.",
-        "planning_restart_time": "Neustart-Zeit",
-        "planning_schedule_title": "Geplanter Rennablauf (Entwurf)",
-        "planning_checklist_title": "Planungs-Checkliste",
-        "checklist_runners_assigned": "Alle Etappen haben einen Läufer zugewiesen",
-        "checklist_paces_realistic": "Alle Tempos sind realistisch",
-        "checklist_restart_verified": "Alle Neustart-Zeiten sind verifiziert",
-        "checklist_runners_informed": "Alle Läufer kennen ihre Startzeiten",
-        "checklist_logistics_clarified": "Transport / Logistik zwischen Etappen ist geklärt",
-        "checklist_contact_ready": "Kontaktliste für den Renntag ist bereit",
-        "planning_export_title": "Planung exportieren",
-        "download_csv": "CSV herunterladen",
-        "download_excel": "Excel herunterladen",
-        "download_pdf": "PDF herunterladen",
-        "info_pdf_install": "PDF-Export: Installieren Sie `fpdf` in requirements.txt, um dies zu aktivieren.",
-        
-        # Admin Tab
-        "admin_title": "Admin - Läufer-Metadaten pflegen",
-        "admin_info_overrides": "Änderungen in diesem Tab werden als Überschreibungen in `data/processed/runners_overrides.json` gespeichert und auf `runners.json` angewendet. Die Excel-Quelldateien bleiben unverändert.",
-        "admin_select_runner": "Läufer zur Bearbeitung auswählen",
-        "please_select": "(bitte auswählen)",
-        "error_runner_not_found": "Läufer nicht im Datenframe gefunden.",
-        "admin_active": "Aktiv",
-        "admin_default_pace": "Standard-Tempo (Sekunden pro km)",
-        "admin_preferred_distance": "Bevorzugte Distanz",
-        "admin_favorite_stage": "Lieblingsetappe",
-        "admin_gender": "Geschlecht",
-        "admin_birth_year": "Geburtsjahr",
-        "admin_company": "Firma",
-        "admin_email": "E-Mail",
-        "admin_mobile": "Mobiltelefon",
-        "admin_street": "Straße",
-        "admin_zip_code": "PLZ",
-        "admin_city": "Stadt",
-        "admin_country": "Land",
-        "admin_tshirt_size": "T-Shirt-Größe",
-        "admin_food_preference": "Essenspräferenz",
-        "admin_notes": "Notizen (Überschreibung)",
-        "admin_save_button": "Änderungen speichern",
-        "admin_save_success": "Läufer-Überschreibungen gespeichert. Sie werden beim nächsten Neuladen angewendet.",
-        "admin_rerun_info": "Um ein sofortiges Neuladen zu erzwingen, verwenden Sie 'Rerun' im Streamlit-Menü.",
-        "admin_export_title": "Läufer-Überschreibungen exportieren",
-        "info_no_overrides": "Noch keine Überschreibungen gefunden.",
-        "admin_download_overrides": "Überschreibungen als CSV herunterladen",
     },
 }
 
@@ -945,8 +720,12 @@ def t(key: str) -> str:
     """
     Translate UI string key to current language.
 
+    Loads translations from JSON files in locales/ directory.
+    Falls back to English if key not found, then to fallback strings,
+    then returns the key itself.
+
     Args:
-        key: Translation key from STRINGS dictionary
+        key: Translation key from translation files
 
     Returns:
         Translated string, or key itself if translation not found
@@ -956,7 +735,25 @@ def t(key: str) -> str:
         '🏃\u200d♂️ Sola History - Internal Analytics'
     """
     lang = get_lang()
-    return STRINGS.get(lang, STRINGS["en"]).get(key, key)
+    translations = load_translations()
+    
+    # Try current language
+    if lang in translations and key in translations[lang]:
+        return translations[lang][key]
+    
+    # Fallback to English
+    if "en" in translations and key in translations["en"]:
+        return translations["en"][key]
+    
+    # Fallback to hardcoded strings (critical keys only)
+    if lang in _FALLBACK_STRINGS and key in _FALLBACK_STRINGS[lang]:
+        return _FALLBACK_STRINGS[lang][key]
+    
+    if key in _FALLBACK_STRINGS.get("en", {}):
+        return _FALLBACK_STRINGS["en"][key]
+    
+    # Last resort: return the key itself
+    return key
 
 # ==============================================================================
 # MAIN STREAMLIT APPLICATION
