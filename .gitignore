@@ -27,6 +27,7 @@ venv/
 
 # Data (no real data here)
 data/processed/
+sola-history-data/data/processed/
 data/raw/
 
 # IDE
