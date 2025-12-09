@@ -1,13 +1,61 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# ------------------------------------------------------------------------------
+# Name........: app.py
+# Author......: Stefan Oehrli (oes) stefan.oehrli@oradba.ch
+# Editor......: Stefan Oehrli
+# Date........: 2024-12-09
+# Version.....: v1.0.0
+# Purpose.....: SOLA History - Streamlit web application for relay race analytics.
+#               Provides interactive visualizations, runner profiles, team planning,
+#               and historical race data analysis.
+# Requires....: Python >=3.11, streamlit, pandas, altair, fpdf (optional)
+# License.....: Apache License Version 2.0
+# ------------------------------------------------------------------------------
+
+"""
+SOLA History - Internal Analytics Web Application
+
+A comprehensive Streamlit application for analyzing historical SOLA relay race data.
+Provides multi-tab interface for year overviews, runner details, team planning,
+and data visualization.
+
+Features:
+  - Password-protected access
+  - Multi-language support (English/German)
+  - Interactive data filters and visualizations
+  - Runner profile management with overrides
+  - Team planning and PDF export
+  - Historical statistics and highlights
+  - Admin interface for data management
+
+Environment Variables:
+  SOLA_APP_PASSWORD - Application password (default: 'sola')
+
+Data Structure:
+  Requires JSON files in data/processed/:
+    - races.json    : Race events by year
+    - legs.json     : Race stages/legs
+    - teams.json    : Participating teams
+    - runners.json  : Runner profiles
+    - results.json  : Individual race results
+    - runners_overrides.json : Optional runtime overrides
+
+Usage:
+  streamlit run app.py
+  # With custom password:
+  SOLA_APP_PASSWORD=secret123 streamlit run app.py
+"""
 
 import json
+import locale
 import os
 from datetime import date, datetime, time, timedelta
-from pathlib import Path
-from typing import Any, Dict
 from io import BytesIO
-import locale
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import logging
 
 try:
     from fpdf import FPDF
@@ -19,27 +67,67 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data" / "processed"
+# ==============================================================================
+# LOGGING CONFIGURATION
+# ==============================================================================
 
-APP_PASSWORD = os.environ.get("SOLA_APP_PASSWORD", "sola")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-RUNNER_OVERRIDES_FILE = DATA_DIR / "runners_overrides.json"
+# ==============================================================================
+# CONFIGURATION CONSTANTS
+# ==============================================================================
+
+# Base directory (application root)
+BASE_DIR: Path = Path(__file__).resolve().parent
+
+# Directory containing processed JSON data files
+DATA_DIR: Path = BASE_DIR / "data" / "processed"
+
+# Application password from environment variable
+APP_PASSWORD: str = os.environ.get("SOLA_APP_PASSWORD", "sola")
+
+# Runner overrides file for runtime modifications
+RUNNER_OVERRIDES_FILE: Path = DATA_DIR / "runners_overrides.json"
+
+# Supported languages for UI
+SUPPORTED_LANGS: list[str] = ["en", "de"]
 
 
-# -------------------------------------------------------------------
-# Authentication (simple password gate)
-# -------------------------------------------------------------------
-
+# ==============================================================================
+# AUTHENTICATION
+# ==============================================================================
 
 def check_password() -> None:
-    """Very simple password protection via session state."""
+    """
+    Simple password protection using Streamlit session state.
+
+    Displays password input field and validates against APP_PASSWORD.
+    Stops application execution if password is incorrect or not entered.
+    Uses session state to persist authentication across page interactions.
+
+    Session State:
+        password_ok (bool): True if correct password entered
+        password (str): User-entered password
+
+    Exits:
+        st.stop() if password not correct
+
+    Example:
+        >>> check_password()  # Shows password prompt if not authenticated
+    """
 
     def password_entered():
+        """Callback to validate entered password."""
         if st.session_state["password"] == APP_PASSWORD:
             st.session_state["password_ok"] = True
+            logger.info("User authenticated successfully")
         else:
             st.session_state["password_ok"] = False
+            logger.warning("Failed authentication attempt")
 
     if "password_ok" not in st.session_state:
         st.text_input(
@@ -60,12 +148,30 @@ def check_password() -> None:
         st.stop()
 
 
-# -------------------------------------------------------------------
-# Helpers
-# -------------------------------------------------------------------
+# ==============================================================================
+# DATA LOADING & MANIPULATION
+# ==============================================================================
 
 def build_overrides_export_df(runners_df: pd.DataFrame) -> pd.DataFrame:
-    """Merge overrides with runner base data for easier export."""
+    """
+    Merge override data with runner base data for export.
+
+    Creates a DataFrame suitable for export that combines base runner data
+    with any override values, preferring override values when available.
+
+    Args:
+        runners_df: Base DataFrame containing runner data
+
+    Returns:
+        DataFrame with merged base and override data, or empty DataFrame
+        if no overrides exist
+
+    Example:
+        >>> runners = pd.DataFrame({'runner_id': ['R1'], 'active': [True]})
+        >>> export_df = build_overrides_export_df(runners)
+        >>> 'runner_id' in export_df.columns
+        True
+    """
     overrides = load_runner_overrides()
     if not overrides:
         return pd.DataFrame()
@@ -99,7 +205,7 @@ def build_overrides_export_df(runners_df: pd.DataFrame) -> pd.DataFrame:
 
     merged = base.merge(ov_df, on="runner_id", how="right", suffixes=("", "_ov"))
 
-    # Für Export: bevorzugt Override-Werte, fallback auf base
+    # For export: prefer override values, fallback to base values
     out_rows = []
     for _, row in merged.iterrows():
         def val(col):
@@ -135,21 +241,68 @@ def build_overrides_export_df(runners_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out_rows)
 
 def load_json(name: str) -> pd.DataFrame:
+    """
+    Load JSON file and convert to pandas DataFrame.
+
+    Args:
+        name: Base filename without .json extension (e.g., 'races', 'runners')
+
+    Returns:
+        DataFrame with loaded data, or empty DataFrame on error
+
+    Example:
+        >>> races_df = load_json('races')
+        >>> 'year' in races_df.columns  # doctest: +SKIP
+        True
+    """
     path = DATA_DIR / f"{name}.json"
     if not path.exists():
+        logger.error(f"Missing data file: {path}")
         st.error(f"Missing data file: {path}")
         return pd.DataFrame()
-    with path.open(encoding="utf-8") as f:
-        data = json.load(f)
-    return pd.DataFrame(data)
 
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        logger.debug(f"Loaded {len(data)} records from {name}.json")
+        return pd.DataFrame(data)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in {path}: {e}")
+        st.error(f"Invalid JSON in {path}: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        logger.error(f"Error loading {path}: {e}")
+        st.error(f"Error loading {path}: {e}")
+        return pd.DataFrame()
+
+
+# ==============================================================================
+# FORMATTING UTILITIES
+# ==============================================================================
 
 def format_seconds_to_hms(seconds: Any) -> str:
+    """
+    Convert seconds to H:MM:SS or HH:MM:SS format.
+
+    Args:
+        seconds: Number of seconds (numeric or None)
+
+    Returns:
+        Formatted time string, or empty string if invalid/zero
+
+    Example:
+        >>> format_seconds_to_hms(3665)
+        '1:01:05'
+        >>> format_seconds_to_hms(None)
+        ''
+        >>> format_seconds_to_hms(0)
+        ''
+    """
     if seconds is None or pd.isna(seconds):
         return ""
     try:
         seconds = int(round(float(seconds)))
-    except Exception:
+    except (ValueError, TypeError):
         return ""
     if seconds <= 0:
         return ""
@@ -157,11 +310,28 @@ def format_seconds_to_hms(seconds: Any) -> str:
 
 
 def format_pace(sec_per_km: Any) -> str:
+    """
+    Format pace as MM:SS min/km.
+
+    Args:
+        sec_per_km: Seconds per kilometer (numeric or None)
+
+    Returns:
+        Formatted pace string (e.g., '05:30 min/km'), or empty string if invalid
+
+    Example:
+        >>> format_pace(330)
+        '05:30 min/km'
+        >>> format_pace(None)
+        ''
+        >>> format_pace(-5)
+        ''
+    """
     if sec_per_km is None or pd.isna(sec_per_km):
         return ""
     try:
         sec = float(sec_per_km)
-    except Exception:
+    except (ValueError, TypeError):
         return ""
     if sec <= 0:
         return ""
@@ -172,8 +342,20 @@ def format_pace(sec_per_km: Any) -> str:
 
 def apply_runner_filter(df: pd.DataFrame, mode: str) -> pd.DataFrame:
     """
-    Filter runners by active state, if 'active' column exists.
-    mode: 'All', 'Active only', 'Inactive only'
+    Filter runners DataFrame by active status.
+
+    Args:
+        df: DataFrame containing runner data
+        mode: Filter mode - 'All', 'Active only', or 'Inactive only'
+
+    Returns:
+        Filtered DataFrame. Returns unfiltered if 'active' column missing.
+
+    Example:
+        >>> df = pd.DataFrame({'runner_id': ['R1', 'R2'], 'active': [True, False]})
+        >>> filtered = apply_runner_filter(df, 'Active only')
+        >>> len(filtered)
+        1
     """
     if "active" not in df.columns:
         return df
@@ -185,23 +367,71 @@ def apply_runner_filter(df: pd.DataFrame, mode: str) -> pd.DataFrame:
     return df
 
 
+# ==============================================================================
+# RUNNER OVERRIDES MANAGEMENT
+# ==============================================================================
+
 def load_runner_overrides() -> Dict[str, Dict[str, Any]]:
-    """Load overrides for runners (active, pace, etc.) from JSON."""
+    """
+    Load runner override data from JSON file.
+
+    Overrides allow runtime modifications to runner data (active status,
+    pace, preferences, etc.) without changing the base data files.
+
+    Returns:
+        Dictionary mapping runner_id to override fields, or empty dict
+        if file doesn't exist or is invalid
+
+    Example:
+        >>> overrides = load_runner_overrides()
+        >>> isinstance(overrides, dict)
+        True
+    """
     if not RUNNER_OVERRIDES_FILE.exists():
+        logger.debug("No runner overrides file found")
         return {}
     try:
         with RUNNER_OVERRIDES_FILE.open(encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, dict):
+            logger.info(f"Loaded {len(data)} runner overrides")
             return data
+        logger.warning(f"Invalid format in {RUNNER_OVERRIDES_FILE}")
         return {}
-    except Exception:
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in overrides file: {e}")
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading overrides: {e}")
         return {}
 
+
+# ==============================================================================
+# PDF EXPORT
+# ==============================================================================
 
 def plan_df_to_pdf_bytes(plan_df: pd.DataFrame, title: str = "SOLA Plan") -> bytes:
-    """Create a very simple PDF from a planning DataFrame."""
+    """
+    Generate PDF from planning DataFrame.
+
+    Creates a simple PDF table from the provided DataFrame. Requires fpdf
+    package to be installed.
+
+    Args:
+        plan_df: DataFrame containing planning data
+        title: PDF document title (default: 'SOLA Plan')
+
+    Returns:
+        PDF as bytes, or empty bytes if fpdf not available
+
+    Example:
+        >>> df = pd.DataFrame({'Name': ['Alice'], 'Leg': [1]})
+        >>> pdf_bytes = plan_df_to_pdf_bytes(df)
+        >>> isinstance(pdf_bytes, bytes)
+        True
+    """
     if not HAS_FPDF:
+        logger.warning("fpdf not installed, cannot generate PDF")
         return b""
 
     pdf = FPDF()
@@ -212,10 +442,10 @@ def plan_df_to_pdf_bytes(plan_df: pd.DataFrame, title: str = "SOLA Plan") -> byt
 
     pdf.set_font("Arial", size=9)
 
-    # Simple table header
+    # Simple table with fixed column widths
     col_widths = []
     for col in plan_df.columns:
-        col_widths.append(25)  # simple fixed width, adjust if needed
+        col_widths.append(25)  # Fixed width, adjust if needed
 
     pdf.ln(5)
     for i, col in enumerate(plan_df.columns):
@@ -234,13 +464,45 @@ def plan_df_to_pdf_bytes(plan_df: pd.DataFrame, title: str = "SOLA Plan") -> byt
 
 
 def save_runner_overrides(overrides: Dict[str, Dict[str, Any]]) -> None:
-    RUNNER_OVERRIDES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with RUNNER_OVERRIDES_FILE.open("w", encoding="utf-8") as f:
-        json.dump(overrides, f, ensure_ascii=False, indent=2)
+    """
+    Save runner overrides to JSON file.
+
+    Args:
+        overrides: Dictionary mapping runner_id to override fields
+
+    Example:
+        >>> overrides = {'R1': {'active': False}}
+        >>> save_runner_overrides(overrides)  # doctest: +SKIP
+    """
+    try:
+        RUNNER_OVERRIDES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with RUNNER_OVERRIDES_FILE.open("w", encoding="utf-8") as f:
+            json.dump(overrides, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved {len(overrides)} runner overrides")
+    except Exception as e:
+        logger.error(f"Failed to save overrides: {e}")
+        st.error(f"Failed to save overrides: {e}")
 
 
 def apply_runner_overrides_df(runners_df: pd.DataFrame) -> pd.DataFrame:
-    """Apply overrides onto the runners DataFrame."""
+    """
+    Apply override data to runners DataFrame.
+
+    Merges override values into the base runner data, replacing base values
+    where overrides exist.
+
+    Args:
+        runners_df: Base runners DataFrame
+
+    Returns:
+        DataFrame with overrides applied
+
+    Example:
+        >>> df = pd.DataFrame({'id': ['R1'], 'active': [True]})
+        >>> result_df = apply_runner_overrides_df(df)
+        >>> 'runner_id' in result_df.columns or 'id' in result_df.columns
+        True
+    """
     overrides = load_runner_overrides()
     if not overrides:
         return runners_df
@@ -261,8 +523,32 @@ def apply_runner_overrides_df(runners_df: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data
-def load_data() -> Dict[str, pd.DataFrame] | None:
-    """Load all JSON data and build a merged fact table."""
+def load_data() -> Optional[Dict[str, pd.DataFrame]]:
+    """
+    Load all JSON data files and create merged fact table.
+
+    Loads races, legs, teams, runners, and results from JSON files,
+    applies runner overrides, and creates a comprehensive merged DataFrame
+    for analysis.
+
+    Returns:
+        Dictionary containing:
+            - races: DataFrame of race events
+            - legs: DataFrame of race stages
+            - teams: DataFrame of teams
+            - runners: DataFrame of runners (with overrides applied)
+            - results: DataFrame of race results
+            - merged: Comprehensive fact table joining all data
+        Returns None if any required file is missing
+
+    Caching:
+        Uses Streamlit @st.cache_data for performance
+
+    Example:
+        >>> data = load_data()  # doctest: +SKIP
+        >>> 'merged' in data
+        True
+    """
     races_df = load_json("races")
     legs_df = load_json("legs")
     teams_df = load_json("teams")
@@ -270,15 +556,18 @@ def load_data() -> Dict[str, pd.DataFrame] | None:
     results_df = load_json("results")
 
     if races_df.empty or legs_df.empty or teams_df.empty or runners_df.empty or results_df.empty:
+        logger.error("One or more required data files are empty")
         return None
 
-    # Normalise ID columns
+    logger.info("All data files loaded successfully")
+
+    # Normalize ID columns for consistent naming
     races_df = races_df.rename(columns={"id": "race_id"})
     legs_df = legs_df.rename(columns={"id": "leg_id"})
     teams_df = teams_df.rename(columns={"id": "team_id"})
     runners_df = runners_df.rename(columns={"id": "runner_id"})
 
-    # Apply overrides to runners
+    # Apply runtime overrides to runner data
     runners_df = apply_runner_overrides_df(runners_df)
 
     # Merge everything into one big fact table
@@ -315,9 +604,12 @@ def load_data() -> Dict[str, pd.DataFrame] | None:
         "merged": merged,
     }
 
-SUPPORTED_LANGS = ["en", "de"]
+# ==============================================================================
+# INTERNATIONALIZATION (i18n)
+# ==============================================================================
 
-STRINGS = {
+# UI text strings for supported languages
+STRINGS: Dict[str, Dict[str, str]] = {
     "en": {
         "app_title": "🏃‍♂️ Sola History - Internal Analytics",
         "tab_year": "📅 Year overview",
@@ -329,7 +621,6 @@ STRINGS = {
         "sidebar_filters": "Filters",
         "sidebar_runners": "Runners",
         "password_incorrect": "Incorrect password.",
-        # ... hier kannst du bei Bedarf später erweitern
     },
     "de": {
         "app_title": "🏃‍♂️ Sola History - Interne Auswertungen",
@@ -347,7 +638,21 @@ STRINGS = {
 
 
 def detect_default_lang() -> str:
-    # einfache Heuristik über System/Env
+    """
+    Detect default language from system environment.
+
+    Checks LANG environment variable and system locale to determine
+    appropriate default language.
+
+    Returns:
+        Language code: 'de' for German, 'en' for English (default)
+
+    Example:
+        >>> lang = detect_default_lang()
+        >>> lang in ['en', 'de']
+        True
+    """
+    # Simple heuristic based on system environment
     env_lang = os.environ.get("LANG", "") or locale.getdefaultlocale()[0] or ""
     env_lang = env_lang.lower()
     if env_lang.startswith("de"):
@@ -356,23 +661,60 @@ def detect_default_lang() -> str:
 
 
 def get_lang() -> str:
+    """
+    Get current UI language from session state.
+
+    Returns:
+        Current language code ('en' or 'de')
+
+    Example:
+        >>> lang = get_lang()  # doctest: +SKIP
+        >>> lang in SUPPORTED_LANGS
+        True
+    """
     if "lang" in st.session_state:
         return st.session_state["lang"]
-    # default beim ersten Durchlauf
+    # Set default on first access
     st.session_state["lang"] = detect_default_lang()
     return st.session_state["lang"]
 
 
 def t(key: str) -> str:
+    """
+    Translate UI string key to current language.
+
+    Args:
+        key: Translation key from STRINGS dictionary
+
+    Returns:
+        Translated string, or key itself if translation not found
+
+    Example:
+        >>> t('app_title')  # doctest: +SKIP
+        '🏃\u200d♂️ Sola History - Internal Analytics'
+    """
     lang = get_lang()
     return STRINGS.get(lang, STRINGS["en"]).get(key, key)
 
-# -------------------------------------------------------------------
-# Main Streamlit App
-# -------------------------------------------------------------------
-
+# ==============================================================================
+# MAIN STREAMLIT APPLICATION
+# ==============================================================================
 
 def main() -> None:
+    """
+    Main entry point for Streamlit application.
+
+    Orchestrates the entire application flow:
+      1. Configure page settings
+      2. Authenticate user
+      3. Load data
+      4. Render UI with tabs and filters
+      5. Handle user interactions
+
+    Example:
+        Run via command line:
+        $ streamlit run app.py
+    """
     st.set_page_config(page_title="Sola History", layout="wide")
     check_password()
 
