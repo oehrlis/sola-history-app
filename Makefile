@@ -1,144 +1,270 @@
-# ------------------------------------------------------------
-# Sola History - Makefile
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# SOLA History - Makefile
+# ------------------------------------------------------------------------------
+# Name........: Makefile
+# Author......: Stefan Oehrli (oes) stefan.oehrli@oradba.ch
+# Editor......: Stefan Oehrli
+# Date........: 2024-12-09
+# Version.....: v1.0.0
+# Purpose.....: Build automation for SOLA History web application.
+#               Provides targets for local development, Docker operations,
+#               data import, and cleanup tasks.
+# Requires....: Python >=3.11, Docker, docker-compose
+# Notes.......: Variables can be overridden via command line or environment
+# License.....: Apache License Version 2.0
+# ------------------------------------------------------------------------------
 
-# Projekt / Docker
+# Project configuration
 PROJECT_NAME    := sola-history
 IMAGE_NAME      := sola-history
 CONTAINER_NAME  := sola-history
 
-# App-Passwort (kann beim Aufruf überschrieben werden)
+# Application password (can be overridden via command line or environment)
 SOLA_APP_PASSWORD ?= sola
 
-# Python / venv
+# Python configuration
+# Can be overridden to use different Python version (e.g., make PYTHON=python3.12)
 PYTHON      ?= python3.11
+
+# Data repository location (relative path to sola-history-data repo)
 DATA_REPO   ?= ../sola-history-data
+
+# Output directory for processed JSON files
 DATA_OUTDIR ?= data/processed
 
+# Virtual environment configuration
 VENV_DIR    ?= venv
 VENV_PYTHON := $(VENV_DIR)/bin/python3
 VENV_PIP    := $(VENV_DIR)/bin/pip
 
 .DEFAULT_GOAL := help
 
-# ------------------------------------------------------------
-# Hilfstargets
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# PHONY TARGETS DECLARATION
+# ------------------------------------------------------------------------------
+# Declare all targets that don't represent actual files
 
-.PHONY: help venv install import run-local run-local-debug \
+.PHONY: help venv install import-data validate-data run-local run-local-debug \
         build rebuild up upd down downv shell logs image ps \
-        clean-image clean-dangling clean-venv reinstall
+        clean-image clean-dangling clean-venv reinstall clean-all
 
 help:
 	@echo ""
-	@echo "Sola History - Makefile"
+	@echo "================================================================================"
+	@echo "SOLA History - Makefile Help"
+	@echo "================================================================================"
 	@echo ""
-	@echo " Lokale Entwicklung:"
-	@echo "   make venv              - virtuelle Umgebung anlegen"
-	@echo "   make install           - Dependencies installieren"
-	@echo "   make import-data       - Excel -> JSON verarbeiten (mit DATA_REPO und DATA_OUTDIR)"
-	@echo "   make run-local         - Streamlit lokal starten"
-	@echo "   make run-local-debug   - Streamlit Debug starten"
+	@echo "Local Development:"
+	@echo "  make venv              Create Python virtual environment"
+	@echo "  make install           Install Python dependencies"
+	@echo "  make import-data       Import Excel files to JSON (uses DATA_REPO)"
+	@echo "  make validate-data     Validate JSON data against schema"
+	@echo "  make run-local         Start Streamlit app locally"
+	@echo "  make run-local-debug   Start Streamlit app with debug logging"
 	@echo ""
-	@echo " Docker / Compose:"
-	@echo "   make build             - Compose-Image bauen"
-	@echo "   make rebuild           - Compose-Image ohne Cache bauen"
-	@echo "   make up                - Container starten (foreground)"
-	@echo "   make upd               - Container starten (detached)"
-	@echo "   make down              - Container stoppen"
-	@echo "   make downv             - Container + Volumes stoppen"
-	@echo "   make shell             - Shell in Container öffnen"
-	@echo "   make logs              - Logs verfolgen"
+	@echo "Docker Operations:"
+	@echo "  make build             Build Docker image via docker-compose"
+	@echo "  make rebuild           Rebuild Docker image without cache"
+	@echo "  make up                Start container (foreground, attached)"
+	@echo "  make upd               Start container (detached mode)"
+	@echo "  make down              Stop and remove container"
+	@echo "  make downv             Stop container and remove volumes"
+	@echo "  make shell             Open bash shell in running container"
+	@echo "  make logs              Follow container logs"
 	@echo ""
-	@echo " Cleanup:"
-	@echo "   make clean-venv        - nur venv/ löschen"
-	@echo "   make reinstall         - venv löschen + neu installieren"
-	@echo "   make clean-image       - nur Projekt-Image löschen"
-	@echo "   make clean-dangling    - dangling Images löschen"
-	@echo "   make clean-all         - venv + Image + dangling löschen"
+	@echo "Information & Cleanup:"
+	@echo "  make image             Show project Docker images"
+	@echo "  make ps                Show running project containers"
+	@echo "  make clean-venv        Remove Python virtual environment only"
+	@echo "  make reinstall         Remove venv and reinstall dependencies"
+	@echo "  make clean-image       Remove project Docker image"
+	@echo "  make clean-dangling    Remove dangling Docker images"
+	@echo "  make clean-all         Complete cleanup (venv + images)"
+	@echo ""
+	@echo "Environment Variables:"
+	@echo "  SOLA_APP_PASSWORD      Application password (default: sola)"
+	@echo "  PYTHON                 Python executable (default: python3.11)"
+	@echo "  DATA_REPO              Data repository path (default: ../sola-history-data)"
+	@echo "  DATA_OUTDIR            JSON output directory (default: data/processed)"
+	@echo ""
+	@echo "Example Usage:"
+	@echo "  make install                                    # Install with defaults"
+	@echo "  make import-data DATA_REPO=/path/to/data       # Custom data path"
+	@echo "  make run-local SOLA_APP_PASSWORD=secret123     # Custom password"
+	@echo "  make PYTHON=python3.12 install                 # Use Python 3.12"
+	@echo ""
+	@echo "================================================================================"
 	@echo ""
 
-# ------------------------------------------------------------
-# Python / venv
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# PYTHON VIRTUAL ENVIRONMENT
+# ------------------------------------------------------------------------------
 
+# Create virtual environment directory
+# This is a real target (not .PHONY) - only runs if venv/ doesn't exist
 $(VENV_DIR):
+	@echo "Creating virtual environment using $(PYTHON)..."
 	$(PYTHON) -m venv $(VENV_DIR)
 	@echo "✓ Virtual environment created in $(VENV_DIR)"
 
+# Convenience target to ensure venv exists
 venv: $(VENV_DIR)
+	@echo "✓ Virtual environment ready"
 
+# Install Python dependencies
+# Depends on: venv (ensures virtual environment exists)
 install: venv
-	$(VENV_PIP) install --upgrade pip
-	$(VENV_PIP) install -r requirements.txt
-	@echo "✓ Dependencies installed"
+	@echo "Upgrading pip..."
+	@$(VENV_PIP) install --upgrade pip
+	@echo "Installing dependencies from requirements.txt..."
+	@$(VENV_PIP) install -r requirements.txt
+	@echo "✓ Dependencies installed successfully"
 
-.PHONY: import-data 
+# Import Excel data to JSON format
+# Depends on: venv (ensures Python environment exists)
+# Uses: DATA_REPO and DATA_OUTDIR variables
 import-data: venv
-	$(VENV_PYTHON) $(DATA_REPO)/tools/import_excel.py --output-dir $(DATA_OUTDIR)
-	@echo "✓ Excel import completed"
+	@echo "Creating output directory: $(DATA_OUTDIR)"
+	@mkdir -p $(DATA_OUTDIR)
+	@echo "Importing Excel data from $(DATA_REPO)..."
+	@$(VENV_PYTHON) $(DATA_REPO)/tools/import_excel.py --output-dir $(DATA_OUTDIR)
+	@echo "Validating imported data..."
+	@$(MAKE) validate-data
+	@echo "✓ Excel import and validation completed (output: $(DATA_OUTDIR))"
 
+# Validate JSON data against schema
+# Depends on: venv (ensures Python environment exists)
+# Requires: JSON files in DATA_OUTDIR and schema file in DATA_REPO
+validate-data: venv
+	@echo "Validating data in $(DATA_OUTDIR) against schema..."
+	@$(VENV_PYTHON) $(DATA_REPO)/tools/validate_data.py \
+		--data-dir $(DATA_OUTDIR) \
+		--schema-file $(DATA_REPO)/schemas/sola.schema.json
+	@echo "✓ Data in $(DATA_OUTDIR) is valid against schema"
+
+# Run Streamlit app locally (production mode)
+# Depends on: install (ensures all dependencies are installed)
+# Uses: SOLA_APP_PASSWORD environment variable
 run-local: install
-	SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) $(VENV_PYTHON) -m streamlit run app.py
+	@echo "Starting Streamlit app at http://localhost:8501"
+	@echo "Password: $(SOLA_APP_PASSWORD)"
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) $(VENV_PYTHON) -m streamlit run app.py
 
+# Run Streamlit app locally with debug logging
+# Depends on: install (ensures all dependencies are installed)
+# Uses: SOLA_APP_PASSWORD environment variable
 run-local-debug: install
-	SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) \
+	@echo "Starting Streamlit app in DEBUG mode at http://localhost:8501"
+	@echo "Password: $(SOLA_APP_PASSWORD)"
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) \
 		$(VENV_PYTHON) -m streamlit run app.py --logger.level=debug
 
-# ------------------------------------------------------------
-# Docker
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# DOCKER OPERATIONS
+# ------------------------------------------------------------------------------
 
+# Build Docker image using docker-compose
+# Reads configuration from docker-compose.yml
 build:
-	docker compose build
+	@echo "Building Docker image..."
+	@docker compose build
+	@echo "✓ Docker image built successfully"
 
+# Rebuild Docker image without using cache
+# Useful when dependencies or base image changed
 rebuild:
-	docker compose build --no-cache
+	@echo "Rebuilding Docker image without cache..."
+	@docker compose build --no-cache
+	@echo "✓ Docker image rebuilt successfully"
 
+# Start container in foreground (attached mode)
+# Press Ctrl+C to stop
 up:
-	SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up
+	@echo "Starting container in foreground mode..."
+	@echo "Password: $(SOLA_APP_PASSWORD)"
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up
 
+# Start container in background (detached mode)
 upd:
-	SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up -d
+	@echo "Starting container in detached mode..."
+	@echo "Password: $(SOLA_APP_PASSWORD)"
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up -d
+	@echo "✓ Container started. Use 'make logs' to view output"
 
+# Stop and remove container
 down:
-	docker compose down
+	@echo "Stopping and removing container..."
+	@docker compose down
+	@echo "✓ Container stopped and removed"
 
+# Stop container and remove volumes
+# WARNING: This will delete all persistent data
 downv:
-	docker compose down -v
+	@echo "WARNING: This will remove all volumes and data!"
+	@docker compose down -v
+	@echo "✓ Container and volumes removed"
 
+# Open bash shell in running container
+# Fails gracefully if container is not running
 shell:
-	docker exec -it $(CONTAINER_NAME) /bin/bash || echo "Container läuft nicht."
+	@docker exec -it $(CONTAINER_NAME) /bin/bash || \
+		echo "Error: Container '$(CONTAINER_NAME)' is not running. Use 'make upd' first."
 
+# Follow container logs in real-time
+# Press Ctrl+C to stop following
 logs:
-	docker logs -f $(CONTAINER_NAME) || echo "Container läuft nicht."
+	@docker logs -f $(CONTAINER_NAME) 2>/dev/null || \
+		echo "Error: Container '$(CONTAINER_NAME)' is not running. Use 'make upd' first."
 
-# ------------------------------------------------------------
-# Info / Cleanup
-# ------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# INFORMATION & CLEANUP
+# ------------------------------------------------------------------------------
 
+# Show Docker images for this project
 image:
-	docker images | grep "$(IMAGE_NAME)" || echo "Kein Image gefunden."
+	@docker images | grep "$(IMAGE_NAME)" || \
+		echo "No images found for '$(IMAGE_NAME)'"
 
+# Show running containers for this project
 ps:
-	docker ps | grep "$(CONTAINER_NAME)" || echo "Kein Container aktiv."
+	@docker ps | grep "$(CONTAINER_NAME)" || \
+		echo "No running container found for '$(CONTAINER_NAME)'"
 
+# Remove project Docker image
+# The '-' prefix ignores errors if image doesn't exist
 clean-image:
-	-docker rmi $(IMAGE_NAME):latest 2>/dev/null || echo "Image nicht gefunden."
+	@echo "Removing Docker image $(IMAGE_NAME):latest..."
+	@-docker rmi $(IMAGE_NAME):latest 2>/dev/null && \
+		echo "✓ Image removed" || \
+		echo "Image not found or in use"
 
+# Remove dangling Docker images (not tagged and not used)
+# Helps free up disk space
 clean-dangling:
-	docker image prune -f
+	@echo "Removing dangling Docker images..."
+	@docker image prune -f
 	@echo "✓ Dangling images removed"
 
-# Nur das Python venv löschen
+# Remove Python virtual environment only
+# Does not affect Docker images or containers
 clean-venv:
 	@echo "Removing virtual environment..."
-	rm -rf $(VENV_DIR)
-	@echo "✓ venv removed"
+	@rm -rf $(VENV_DIR)
+	@echo "✓ Virtual environment removed"
 
-# Komplett neu installieren
+# Remove venv and reinstall all dependencies
+# Useful when requirements.txt changed or venv is corrupted
 reinstall: clean-venv install
-	@echo "✓ venv recreated and dependencies reinstalled"
+	@echo "✓ Virtual environment recreated and dependencies reinstalled"
 
+# Complete cleanup: remove venv, images, and dangling images
+# WARNING: This will require rebuilding everything
 clean-all: clean-venv clean-image clean-dangling
+	@echo ""
+	@echo "================================================================================"
 	@echo "✓ Complete cleanup done"
+	@echo "  - Virtual environment removed"
+	@echo "  - Docker images removed"
+	@echo "  - Dangling images removed"
+	@echo "================================================================================"
+	@echo ""
