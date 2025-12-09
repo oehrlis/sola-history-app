@@ -773,16 +773,29 @@ def main() -> None:
         Run via command line:
         $ streamlit run app.py
     """
-    st.set_page_config(page_title=t("page_title"), layout="wide")
+    # MUST be first Streamlit command - before any session_state access
+    st.set_page_config(page_title="Sola History", layout="wide")
+    
     check_password()
 
     # Language selection in sidebar (small select)
     with st.sidebar:
         lang_default = get_lang()
+        
+        def format_language(lang_code: str) -> str:
+            """Format language code for display."""
+            lang_names = {
+                "en": "English",
+                "de": "Deutsch",
+                "ch": "Bärndütsch",
+                "pirate": "🏴‍☠️ Pirate"
+            }
+            return lang_names.get(lang_code, lang_code)
+        
         lang = st.selectbox(
             t("language_selector"),
             options=SUPPORTED_LANGS,
-            format_func=lambda x: "English" if x == "en" else "Deutsch",
+            format_func=format_language,
             index=SUPPORTED_LANGS.index(lang_default),
         )
         st.session_state["lang"] = lang
