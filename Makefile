@@ -1,5 +1,5 @@
 # ------------------------------------------------------------
-# Sola History – Makefile
+# Sola History - Makefile
 # ------------------------------------------------------------
 
 # Projekt / Docker
@@ -12,6 +12,9 @@ SOLA_APP_PASSWORD ?= sola
 
 # Python / venv
 PYTHON      ?= python3.11
+DATA_REPO   ?= ../sola-history-data
+DATA_OUTDIR ?= data/processed
+
 VENV_DIR    ?= venv
 VENV_PYTHON := $(VENV_DIR)/bin/python3
 VENV_PIP    := $(VENV_DIR)/bin/pip
@@ -28,12 +31,12 @@ VENV_PIP    := $(VENV_DIR)/bin/pip
 
 help:
 	@echo ""
-	@echo "Sola History – Makefile"
+	@echo "Sola History - Makefile"
 	@echo ""
 	@echo " Lokale Entwicklung:"
 	@echo "   make venv              - virtuelle Umgebung anlegen"
 	@echo "   make install           - Dependencies installieren"
-	@echo "   make import            - Excel -> JSON verarbeiten"
+	@echo "   make import-data       - Excel -> JSON verarbeiten (mit DATA_REPO und DATA_OUTDIR)"
 	@echo "   make run-local         - Streamlit lokal starten"
 	@echo "   make run-local-debug   - Streamlit Debug starten"
 	@echo ""
@@ -70,8 +73,9 @@ install: venv
 	$(VENV_PIP) install -r requirements.txt
 	@echo "✓ Dependencies installed"
 
-import: install
-	$(VENV_PYTHON) tools/import_excel.py
+.PHONY: import-data 
+import-data: venv
+	$(VENV_PYTHON) $(DATA_REPO)/tools/import_excel.py --output-dir $(DATA_OUTDIR)
 	@echo "✓ Excel import completed"
 
 run-local: install

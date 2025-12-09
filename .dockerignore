@@ -1,0 +1,14 @@
+venv/
+venv311/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.git
+.gitignore
+.idea
+.vscode
+.DS_Store
+data/raw/
+tools/

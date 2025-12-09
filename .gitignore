@@ -1,3 +1,18 @@
+# ------------------------------------------------------------------------------
+# OraDBA - Oracle Database Infrastructure and Security, 5630 Muri, CH
+# ------------------------------------------------------------------------------
+# Name.......: .gitignore
+# Author.....: Stefan Oehrli (oes) stefan.oehrli@oradba.ch
+# Editor.....: Stefan Oehrli
+# Date.......: 2025.12.04
+# Version....: v0.1.0
+# Purpose....: Git ignore rules for the sola-history-app project.
+# License....: Apache License Version 2.0
+# ------------------------------------------------------------------------------
+# Modified...:
+# 2025.12.04 oehrli - add OraDBA header
+# ------------------------------------------------------------------------------
+
 # Python
 __pycache__/
 *.py[cod]
