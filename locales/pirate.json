@@ -1,0 +1,150 @@
+{
+  "app_title": "🏃‍♂️ Sola History - Ye Olde Analytics",
+  "page_title": "Sola History",
+  "language_selector": "Language / Sprache",
+  "password_label": "Secret Code, Matey",
+  "password_incorrect": "Arrr! Wrong password, ye scallywag!",
+
+  "tab_year": "📅 Voyage Log",
+  "tab_runner": "👤 Landlubber Details",
+  "tab_overview": "👥 Crew Roster",
+  "tab_highlights": "⭐ Treasure & Charts",
+  "tab_planning": "🗓 Battle Plan (Arrr!)",
+  "tab_admin": "⚙️ Captain's Quarters",
+
+  "sidebar_filters": "Filters, Aye",
+  "filter_runners": "Swashbucklers",
+  "filter_runners_all": "All Hands",
+  "filter_runners_active": "Active Crew Only",
+  "filter_runners_inactive": "Marooned Crew Only",
+  "filter_runners_help": "Applies to crew lists, overview, treasures and battle plans.",
+  "filter_year": "Year (for Voyage view)",
+  "filter_team": "Ship (for Voyage view)",
+  "filter_runner_year": "Pirate (for Voyage view)",
+
+  "option_all_teams": "(all ships)",
+  "option_all_runners": "(all pirates)",
+
+  "error_load_data": "Blow me down! Could not load the treasure map. Check data/processed/*.json.",
+  "error_missing_file": "Missing treasure map",
+  "error_invalid_json": "Corrupted map in",
+  "error_loading": "Error plundering",
+  "error_save_overrides": "Failed to stash the booty",
+
+  "year_overview_title": "Voyage Log",
+  "metric_teams": "Ships",
+  "metric_runners": "Pirates",
+  "metric_stages": "Ports",
+  "metric_distance": "Total Leagues",
+  "metric_avg_pace": "Avg. Speed",
+
+  "charts_title": "### Navigation Charts",
+  "chart_stage_distances": "Port distances",
+  "chart_team_ranks": "Ship rank per port",
+
+  "info_no_stage_data": "No port data for this voyage, arrr!",
+  "info_no_team_rank_data": "No ship rank data for this voyage / vessel.",
+  "info_select_team": "Select a ship above to see the battle progress, matey.",
+
+  "results_title": "### Spoils - individual & crew after each port",
+
+  "runner_details_title": "Pirate details - all voyages",
+  "select_runner": "Select pirate",
+
+  "runner_profile_title": "### Pirate Profile",
+  "runner_first_participation": "**First Voyage:**",
+  "runner_last_participation": "**Last Voyage:**",
+  "runner_total_runs": "**Total Voyages:**",
+  "runner_teams": "**Ships:**",
+  "runner_years": "**Years at Sea:**",
+  "runner_companies": "**Trading Companies:**",
+
+  "info_no_runs": "No voyages found for this pirate, arrr!",
+
+  "runner_chart_pace_title": "Speed development over voyages",
+  "runner_chart_distance_title": "Total leagues sailed per year",
+  "runner_all_runs_title": "### All voyages of this pirate",
+
+  "overview_title": "Crew Roster - all voyages",
+  "overview_total_runners": "Total Buccaneers",
+  "overview_active_runners": "Active",
+  "overview_inactive_runners": "Marooned",
+  "overview_avg_runs": "Avg. voyages/pirate",
+
+  "highlights_title": "Treasures - all voyages",
+  "highlights_most_runs": "Most voyages",
+  "highlights_most_km": "Most leagues",
+  "highlights_fastest_avg": "Fastest avg. speed",
+
+  "info_no_top10_results": "No top-10 plunderings found.",
+  "info_no_pace_data": "No speed data in the ship's log.",
+
+  "planning_title": "Battle Plan (Draft) - crew & timing",
+  "planning_year": "Plan for year",
+  "planning_template_year": "Template voyage (ports & distances from)",
+  "planning_race_date": "Departure date",
+  "planning_start_time": "First ship sets sail",
+
+  "planning_team_info": "Ship information",
+  "planning_team_name": "Ship name",
+  "planning_company": "Trading Company",
+  "planning_bib_number": "Ship number (optional)",
+  "planning_bib_help": "Ship number will only be final on departure day.",
+
+  "info_no_stages_template": "No ports found for the template voyage.",
+
+  "planning_stage_assignments": "Port assignments (with optional harbors)",
+  "planning_pace": "Speed (seconds per league)",
+  "planning_restart_here": "Harbor here",
+  "planning_restart_help": "If checked, ye'll drop anchor here and all following ports get new departure times.",
+  "planning_restart_time": "Harbor time",
+
+  "planning_schedule_title": "Planned voyage schedule (draft)",
+
+  "planning_checklist_title": "Battle Plan checklist",
+  "checklist_runners_assigned": "All ports have a pirate assigned",
+  "checklist_paces_realistic": "All speeds are sea-worthy",
+  "checklist_restart_verified": "All harbor times are verified",
+  "checklist_runners_informed": "All pirates know their departure times",
+  "checklist_logistics_clarified": "Transport / supplies between ports is arranged",
+  "checklist_contact_ready": "Signal flags for voyage day are ready",
+
+  "planning_export_title": "Export battle plan",
+  "download_csv": "Download Treasure Map (CSV)",
+  "download_excel": "Download Logbook (Excel)",
+  "download_pdf": "Download Charter (PDF)",
+  "info_pdf_install": "PDF export: install `fpdf` in requirements.txt to hoist this flag.",
+
+  "admin_title": "Captain's Quarters - maintain crew records",
+  "admin_info_overrides": "Changes in this cabin are stored as overrides in `data/processed/runners_overrides.json` and applied on top of `runners.json`. The original ship's log remains unchanged.",
+  "admin_select_runner": "Select pirate to edit",
+  "please_select": "(choose yer pirate)",
+  "error_runner_not_found": "Pirate not found in the crew manifest.",
+
+  "admin_active": "Active Crew",
+  "admin_default_pace": "Default speed (seconds per league)",
+  "admin_preferred_distance": "Preferred voyage length",
+  "admin_favorite_stage": "Favorite port",
+  "admin_gender": "Gender",
+  "admin_birth_year": "Year born",
+
+  "admin_company": "Trading Company",
+  "admin_email": "Message in a Bottle",
+  "admin_mobile": "Signal Flags",
+  "admin_street": "Harbor Street",
+  "admin_zip_code": "Port Code",
+  "admin_city": "Port City",
+  "admin_country": "Nation",
+
+  "admin_tshirt_size": "Shirt size",
+  "admin_food_preference": "Grub preference",
+  "admin_notes": "Captain's notes (override)",
+
+  "admin_save_button": "Hoist the Colors!",
+  "admin_save_success": "Crew records stashed in Davy Jones' locker! Will be applied on next boarding.",
+  "admin_rerun_info": "To force an immediate reload, use 'Rerun' in the Streamlit crow's nest.",
+
+  "admin_export_title": "Export crew overrides",
+  "info_no_overrides": "No overrides found yet, the hold is empty.",
+  "admin_download_overrides": "Download overrides as treasure map (CSV)"
+}
