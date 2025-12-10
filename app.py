@@ -1209,6 +1209,252 @@ def main() -> None:
 
                 st.dataframe(runner_table, use_container_width=True)
 
+        # -------------------------------------------------------------------
+        # Head-to-Head Comparison
+        # -------------------------------------------------------------------
+        st.markdown("---")
+        st.subheader(t("h2h_title"))
+
+        col_h2h1, col_h2h2, col_h2h3 = st.columns([2, 2, 1])
+
+        with col_h2h1:
+            runner1_label = st.selectbox(
+                t("h2h_select_runner1"),
+                ["(select)"] + runner_options_global,
+                key="h2h_runner1",
+            )
+
+        with col_h2h2:
+            runner2_label = st.selectbox(
+                t("h2h_select_runner2"),
+                ["(select)"] + runner_options_global,
+                key="h2h_runner2",
+            )
+
+        if runner1_label != "(select)" and runner2_label != "(select)":
+            runner1_id = runner1_label.split("(")[-1].rstrip(")")
+            runner2_id = runner2_label.split("(")[-1].rstrip(")")
+
+            if runner1_id == runner2_id:
+                st.warning(t("h2h_select_two_runners"))
+            else:
+                # Get runner info
+                r1_info = runners_df[runners_df["runner_id"] == runner1_id].iloc[0]
+                r2_info = runners_df[runners_df["runner_id"] == runner2_id].iloc[0]
+
+                r1_name = f"{r1_info['first_name']} {r1_info['last_name']}"
+                r2_name = f"{r2_info['first_name']} {r2_info['last_name']}"
+
+                # Get all runs for both runners
+                r1_runs = merged[merged["runner_id"] == runner1_id].copy()
+                r2_runs = merged[merged["runner_id"] == runner2_id].copy()
+
+                # Career statistics comparison
+                st.markdown(f"### {t('h2h_career_stats')}")
+
+                # Calculate stats for runner 1
+                r1_total_runs = r1_runs["leg_id"].nunique()
+                r1_total_years = r1_runs["year"].nunique()
+                r1_total_km = r1_runs["distance_km"].sum()
+                r1_avg_pace = r1_runs["ind_pace_sec_per_km"].mean()
+                r1_best_rank = r1_runs["ind_rank_leg"].min()
+
+                # Best final team rank for runner 1
+                r1_teams = r1_runs[["team_id", "year"]].drop_duplicates().merge(
+                    teams_df[["team_id", "rank_final"]], on="team_id", how="left"
+                )
+                r1_best_team_rank = r1_teams["rank_final"].min() if not r1_teams["rank_final"].isna().all() else None
+
+                # Calculate stats for runner 2
+                r2_total_runs = r2_runs["leg_id"].nunique()
+                r2_total_years = r2_runs["year"].nunique()
+                r2_total_km = r2_runs["distance_km"].sum()
+                r2_avg_pace = r2_runs["ind_pace_sec_per_km"].mean()
+                r2_best_rank = r2_runs["ind_rank_leg"].min()
+
+                # Best final team rank for runner 2
+                r2_teams = r2_runs[["team_id", "year"]].drop_duplicates().merge(
+                    teams_df[["team_id", "rank_final"]], on="team_id", how="left"
+                )
+                r2_best_team_rank = r2_teams["rank_final"].min() if not r2_teams["rank_final"].isna().all() else None
+
+                # Display side-by-side metrics
+                col_r1, col_vs, col_r2 = st.columns([2, 1, 2])
+
+                with col_r1:
+                    st.markdown(f"**{r1_name}**")
+                    st.metric(t("h2h_metric_starts"), r1_total_runs)
+                    st.metric(t("h2h_metric_years"), r1_total_years)
+                    st.metric(t("h2h_metric_total_km"), f"{r1_total_km:.1f} km")
+                    st.metric(
+                        t("h2h_metric_avg_pace"),
+                        format_pace(r1_avg_pace) if pd.notna(r1_avg_pace) else "-",
+                    )
+                    st.metric(
+                        t("h2h_metric_best_rank"),
+                        int(r1_best_rank) if pd.notna(r1_best_rank) else "-",
+                    )
+                    st.metric(
+                        t("h2h_metric_best_team_rank"),
+                        int(r1_best_team_rank) if pd.notna(r1_best_team_rank) else "-",
+                    )
+
+                with col_vs:
+                    st.markdown("<br>" * 10, unsafe_allow_html=True)
+                    st.markdown("### 🆚")
+
+                with col_r2:
+                    st.markdown(f"**{r2_name}**")
+                    st.metric(t("h2h_metric_starts"), r2_total_runs)
+                    st.metric(t("h2h_metric_years"), r2_total_years)
+                    st.metric(t("h2h_metric_total_km"), f"{r2_total_km:.1f} km")
+                    st.metric(
+                        t("h2h_metric_avg_pace"),
+                        format_pace(r2_avg_pace) if pd.notna(r2_avg_pace) else "-",
+                    )
+                    st.metric(
+                        t("h2h_metric_best_rank"),
+                        int(r2_best_rank) if pd.notna(r2_best_rank) else "-",
+                    )
+                    st.metric(
+                        t("h2h_metric_best_team_rank"),
+                        int(r2_best_team_rank) if pd.notna(r2_best_team_rank) else "-",
+                    )
+
+                # Direct matchups (same stages in same years)
+                st.markdown(f"### {t('h2h_direct_matchups')}")
+
+                # Find common stages (same leg_id)
+                r1_stages = r1_runs[["leg_id", "year", "leg_number", "leg_name", "distance_km",
+                                      "ind_time_seconds", "ind_pace_sec_per_km", "ind_rank_leg"]].copy()
+                r2_stages = r2_runs[["leg_id", "year", "leg_number", "leg_name", "distance_km",
+                                      "ind_time_seconds", "ind_pace_sec_per_km", "ind_rank_leg"]].copy()
+
+                # Merge on leg_id to find same stages (regardless of year)
+                matchups = r1_stages.merge(
+                    r2_stages,
+                    on=["leg_id"],
+                    suffixes=("_r1", "_r2"),
+                    how="inner",
+                )
+
+                if matchups.empty:
+                    st.info(t("h2h_no_matchups"))
+                else:
+                    # Calculate wins/losses based on individual time
+                    matchups["winner"] = matchups.apply(
+                        lambda row: r1_name if row["ind_time_seconds_r1"] < row["ind_time_seconds_r2"]
+                        else (r2_name if row["ind_time_seconds_r1"] > row["ind_time_seconds_r2"] else "Tie"),
+                        axis=1,
+                    )
+
+                    r1_wins = (matchups["winner"] == r1_name).sum()
+                    r2_wins = (matchups["winner"] == r2_name).sum()
+                    ties = (matchups["winner"] == "Tie").sum()
+
+                    # Display win/loss record
+                    col_w1, col_w2, col_w3 = st.columns(3)
+                    col_w1.metric(f"{r1_name} {t('h2h_wins')}", r1_wins)
+                    col_w2.metric(t("h2h_ties"), ties)
+                    col_w3.metric(f"{r2_name} {t('h2h_wins')}", r2_wins)
+
+                    # Detailed matchups table
+                    matchup_table = pd.DataFrame()
+                    matchup_table["Year (R1)"] = matchups["year_r1"].astype("int").astype("string")
+                    matchup_table["Year (R2)"] = matchups["year_r2"].astype("int").astype("string")
+                    matchup_table["Stage"] = matchups["leg_number_r1"]
+                    matchup_table["Stage name"] = matchups["leg_name_r1"]
+                    matchup_table["Distance (km)"] = matchups["distance_km_r1"]
+                    matchup_table[f"{r1_name} Time"] = matchups["ind_time_seconds_r1"].apply(
+                        format_seconds_to_hms
+                    )
+                    matchup_table[f"{r1_name} Pace"] = matchups["ind_pace_sec_per_km_r1"].apply(
+                        format_pace
+                    )
+                    matchup_table[f"{r1_name} Rank"] = matchups["ind_rank_leg_r1"]
+                    matchup_table[f"{r2_name} Time"] = matchups["ind_time_seconds_r2"].apply(
+                        format_seconds_to_hms
+                    )
+                    matchup_table[f"{r2_name} Pace"] = matchups["ind_pace_sec_per_km_r2"].apply(
+                        format_pace
+                    )
+                    matchup_table[f"{r2_name} Rank"] = matchups["ind_rank_leg_r2"]
+                    matchup_table["Winner"] = matchups["winner"]
+
+                    st.dataframe(matchup_table, use_container_width=True)
+
+                # Performance charts
+                st.markdown(f"### {t('h2h_performance_comparison')}")
+
+                col_chart1, col_chart2 = st.columns(2)
+
+                # Pace trends over years
+                with col_chart1:
+                    st.caption(t("h2h_pace_trends"))
+
+                    r1_yearly = (
+                        r1_runs.groupby("year")["ind_pace_sec_per_km"]
+                        .mean()
+                        .reset_index()
+                    )
+                    r1_yearly["Runner"] = r1_name
+
+                    r2_yearly = (
+                        r2_runs.groupby("year")["ind_pace_sec_per_km"]
+                        .mean()
+                        .reset_index()
+                    )
+                    r2_yearly["Runner"] = r2_name
+
+                    combined_yearly = pd.concat([r1_yearly, r2_yearly])
+
+                    if not combined_yearly.empty:
+                        chart_pace = (
+                            alt.Chart(combined_yearly)
+                            .mark_line(point=True)
+                            .encode(
+                                x=alt.X("year:O", title="Year"),
+                                y=alt.Y("ind_pace_sec_per_km:Q", title="Avg. Pace (sec/km)"),
+                                color=alt.Color("Runner:N", legend=alt.Legend(title="Runner")),
+                                tooltip=["year", "Runner", "ind_pace_sec_per_km"],
+                            )
+                        )
+                        st.altair_chart(chart_pace, use_container_width=True)
+
+                # Stage distribution
+                with col_chart2:
+                    st.caption(t("h2h_stage_distribution"))
+
+                    r1_stage_dist = (
+                        r1_runs.groupby("leg_number")
+                        .size()
+                        .reset_index(name="count")
+                    )
+                    r1_stage_dist["Runner"] = r1_name
+
+                    r2_stage_dist = (
+                        r2_runs.groupby("leg_number")
+                        .size()
+                        .reset_index(name="count")
+                    )
+                    r2_stage_dist["Runner"] = r2_name
+
+                    combined_stages = pd.concat([r1_stage_dist, r2_stage_dist])
+
+                    if not combined_stages.empty:
+                        chart_stages = (
+                            alt.Chart(combined_stages)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("leg_number:O", title="Stage Number"),
+                                y=alt.Y("count:Q", title="Times Run"),
+                                color=alt.Color("Runner:N", legend=alt.Legend(title="Runner")),
+                                xOffset="Runner:N",
+                                tooltip=["leg_number", "Runner", "count"],
+                            )
+                        )
+                        st.altair_chart(chart_stages, use_container_width=True)
+
     # -------------------------------------------------------------------
     # TAB: Runner overview
     # -------------------------------------------------------------------

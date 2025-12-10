@@ -146,5 +146,25 @@
 
   "admin_export_title": "Export crew overrides",
   "info_no_overrides": "No overrides found yet, the hold is empty.",
-  "admin_download_overrides": "Download overrides as treasure map (CSV)"
+  "admin_download_overrides": "Download overrides as treasure map (CSV)",
+  "h2h_title": "Duel on the High Seas",
+  "h2h_select_runner1": "Choose first swashbuckler",
+  "h2h_select_runner2": "Choose second swashbuckler",
+  "h2h_compare_button": "Compare Pirates",
+  "h2h_career_stats": "Plunderin' History",
+  "h2h_performance_comparison": "Battle Performance",
+  "h2h_direct_matchups": "Direct Duels (Same Waters)",
+  "h2h_pace_trends": "Speed Trends Over the Years",
+  "h2h_stage_distribution": "Leg Distribution",
+  "h2h_metric_starts": "Voyages Started",
+  "h2h_metric_years": "Years at Sea",
+  "h2h_metric_total_km": "Total Leagues",
+  "h2h_metric_avg_pace": "Avg. Speed",
+  "h2h_metric_best_rank": "Best Solo Rank",
+  "h2h_metric_best_team_rank": "Best Crew Rank (Final)",
+  "h2h_wins": "Victories",
+  "h2h_losses": "Defeats",
+  "h2h_ties": "Draws",
+  "h2h_no_matchups": "These scallywags haven't sailed the same waters yet.",
+  "h2h_select_two_runners": "Choose two different pirates to compare, matey!"
 }
