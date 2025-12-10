@@ -39,6 +39,12 @@ VENV_PIP    := $(VENV_DIR)/bin/pip
 
 .DEFAULT_GOAL := help
 
+# Docker / Compose
+COMPOSE            ?= docker compose
+COMPOSE_FILE       ?= docker-compose.dev.yml
+SERVICE_NAME       ?= sola-history
+CONTAINER_NAME     ?= sola-history-dev
+
 # ------------------------------------------------------------------------------
 # PHONY TARGETS DECLARATION
 # ------------------------------------------------------------------------------
@@ -165,16 +171,18 @@ run-local-debug: install
 
 # Build Docker image using docker-compose
 # Reads configuration from docker-compose.yml
+.PHONY: build rebuild up upd down downv shell logs
+
 build:
-	@echo "Building Docker image..."
-	@docker compose build
+	@echo "Building Docker image using $(COMPOSE_FILE)..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) build $(SERVICE_NAME)
 	@echo "✓ Docker image built successfully"
 
 # Rebuild Docker image without using cache
 # Useful when dependencies or base image changed
 rebuild:
-	@echo "Rebuilding Docker image without cache..."
-	@docker compose build --no-cache
+	@echo "Rebuilding Docker image (no cache) using $(COMPOSE_FILE)..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) build --no-cache $(SERVICE_NAME)
 	@echo "✓ Docker image rebuilt successfully"
 
 # Start container in foreground (attached mode)
@@ -182,38 +190,40 @@ rebuild:
 up:
 	@echo "Starting container in foreground mode..."
 	@echo "Password: $(SOLA_APP_PASSWORD)"
-	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) @$(COMPOSE) -f $(COMPOSE_FILE) up $(SERVICE_NAME)
 
 # Start container in background (detached mode)
 upd:
 	@echo "Starting container in detached mode..."
 	@echo "Password: $(SOLA_APP_PASSWORD)"
-	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) docker compose up -d
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) @$(COMPOSE) -f $(COMPOSE_FILE) up -d $(SERVICE_NAME)
 	@echo "✓ Container started. Use 'make logs' to view output"
 
 # Stop and remove container
 down:
 	@echo "Stopping and removing container..."
-	@docker compose down
+	@$(COMPOSE) -f $(COMPOSE_FILE) down
 	@echo "✓ Container stopped and removed"
 
 # Stop container and remove volumes
 # WARNING: This will delete all persistent data
 downv:
 	@echo "WARNING: This will remove all volumes and data!"
-	@docker compose down -v
+	@$(COMPOSE) -f $(COMPOSE_FILE) down -v
 	@echo "✓ Container and volumes removed"
 
 # Open bash shell in running container
 # Fails gracefully if container is not running
 shell:
+	@echo "Opening shell in container $(CONTAINER_NAME)..."
 	@docker exec -it $(CONTAINER_NAME) /bin/bash || \
 		echo "Error: Container '$(CONTAINER_NAME)' is not running. Use 'make upd' first."
 
 # Follow container logs in real-time
 # Press Ctrl+C to stop following
 logs:
-	@docker logs -f $(CONTAINER_NAME) 2>/dev/null || \
+	@echo "Following logs for $(SERVICE_NAME)..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) logs -f $(SERVICE_NAME) 2>/dev/null || \
 		echo "Error: Container '$(CONTAINER_NAME)' is not running. Use 'make upd' first."
 
 # ------------------------------------------------------------------------------
