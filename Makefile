@@ -9,15 +9,16 @@
 # Purpose.....: Build automation for SOLA History web application.
 #               Provides targets for local development, Docker operations,
 #               data import, and cleanup tasks.
-# Requires....: Python >=3.11, Docker, docker-compose
-# Notes.......: Variables can be overridden via command line or environment
+# Requires....: Python >=3.11, Docker, Docker Compose
+# Notes.......: Variables can be overridden via command line or environment.
+#               Default Compose file: docker-compose.dev.yml
 # License.....: Apache License Version 2.0
 # ------------------------------------------------------------------------------
 
 # Project configuration
 PROJECT_NAME    := sola-history
 IMAGE_NAME      := sola-history
-CONTAINER_NAME  := sola-history
+CONTAINER_NAME  := sola-history   # base name, overridden below for dev container
 
 # Application password (can be overridden via command line or environment)
 SOLA_APP_PASSWORD ?= sola
@@ -40,17 +41,17 @@ VENV_PIP    := $(VENV_DIR)/bin/pip
 .DEFAULT_GOAL := help
 
 # Docker / Compose
-COMPOSE            ?= docker compose
-COMPOSE_FILE       ?= docker-compose.dev.yml
-SERVICE_NAME       ?= sola-history
-CONTAINER_NAME     ?= sola-history-dev
+COMPOSE        ?= docker compose
+COMPOSE_FILE   ?= docker-compose.dev.yml
+SERVICE_NAME   ?= sola-history
+CONTAINER_NAME ?= sola-history-dev   # actual dev container name from Compose
 
 # ------------------------------------------------------------------------------
 # PHONY TARGETS DECLARATION
 # ------------------------------------------------------------------------------
 # Declare all targets that don't represent actual files
 
-.PHONY: help venv install import-data validate-data run-local run-local-debug \
+.PHONY: help install import-data validate-data run-local run-local-debug \
         build rebuild up upd down downv shell logs image ps \
         clean-image clean-dangling clean-venv reinstall clean-all
 
@@ -68,8 +69,8 @@ help:
 	@echo "  make run-local         Start Streamlit app locally"
 	@echo "  make run-local-debug   Start Streamlit app with debug logging"
 	@echo ""
-	@echo "Docker Operations:"
-	@echo "  make build             Build Docker image via docker-compose"
+	@echo "Docker Operations (using $(COMPOSE_FILE)):"
+	@echo "  make build             Build Docker image via Docker Compose"
 	@echo "  make rebuild           Rebuild Docker image without cache"
 	@echo "  make up                Start container (foreground, attached)"
 	@echo "  make upd               Start container (detached mode)"
@@ -92,6 +93,7 @@ help:
 	@echo "  PYTHON                 Python executable (default: python3.11)"
 	@echo "  DATA_REPO              Data repository path (default: ../sola-history-data)"
 	@echo "  DATA_OUTDIR            JSON output directory (default: data/processed)"
+	@echo "  COMPOSE_FILE           Docker Compose file (default: docker-compose.dev.yml)"
 	@echo ""
 	@echo "Example Usage:"
 	@echo "  make install                                    # Install with defaults"
@@ -113,13 +115,9 @@ $(VENV_DIR):
 	$(PYTHON) -m venv $(VENV_DIR)
 	@echo "✓ Virtual environment created in $(VENV_DIR)"
 
-# Convenience target to ensure venv exists
-venv: $(VENV_DIR)
-	@echo "✓ Virtual environment ready"
-
 # Install Python dependencies
-# Depends on: venv (ensures virtual environment exists)
-install: venv
+# Depends on: $(VENV_DIR) (ensures virtual environment exists)
+install: $(VENV_DIR)
 	@echo "Upgrading pip..."
 	@$(VENV_PIP) install --upgrade pip
 	@echo "Installing dependencies from requirements.txt..."
@@ -127,9 +125,9 @@ install: venv
 	@echo "✓ Dependencies installed successfully"
 
 # Import Excel data to JSON format
-# Depends on: venv (ensures Python environment exists)
+# Depends on: $(VENV_DIR) (ensures Python environment exists)
 # Uses: DATA_REPO and DATA_OUTDIR variables
-import-data: venv
+import-data: $(VENV_DIR)
 	@echo "Creating output directory: $(DATA_OUTDIR)"
 	@mkdir -p $(DATA_OUTDIR)
 	@echo "Importing Excel data from $(DATA_REPO)..."
@@ -139,9 +137,9 @@ import-data: venv
 	@echo "✓ Excel import and validation completed (output: $(DATA_OUTDIR))"
 
 # Validate JSON data against schema
-# Depends on: venv (ensures Python environment exists)
+# Depends on: $(VENV_DIR) (ensures Python environment exists)
 # Requires: JSON files in DATA_OUTDIR and schema file in DATA_REPO
-validate-data: venv
+validate-data: $(VENV_DIR)
 	@echo "Validating data in $(DATA_OUTDIR) against schema..."
 	@$(VENV_PYTHON) $(DATA_REPO)/tools/validate_data.py \
 		--data-dir $(DATA_OUTDIR) \
@@ -169,8 +167,8 @@ run-local-debug: install
 # DOCKER OPERATIONS
 # ------------------------------------------------------------------------------
 
-# Build Docker image using docker-compose
-# Reads configuration from docker-compose.yml
+# Build Docker image using Docker Compose
+# Reads configuration from $(COMPOSE_FILE) (default: docker-compose.dev.yml)
 .PHONY: build rebuild up upd down downv shell logs
 
 build:
@@ -190,13 +188,13 @@ rebuild:
 up:
 	@echo "Starting container in foreground mode..."
 	@echo "Password: $(SOLA_APP_PASSWORD)"
-	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) @$(COMPOSE) -f $(COMPOSE_FILE) up $(SERVICE_NAME)
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) $(COMPOSE) -f $(COMPOSE_FILE) up $(SERVICE_NAME)
 
 # Start container in background (detached mode)
 upd:
 	@echo "Starting container in detached mode..."
 	@echo "Password: $(SOLA_APP_PASSWORD)"
-	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) @$(COMPOSE) -f $(COMPOSE_FILE) up -d $(SERVICE_NAME)
+	@SOLA_APP_PASSWORD=$(SOLA_APP_PASSWORD) $(COMPOSE) -f $(COMPOSE_FILE) up -d $(SERVICE_NAME)
 	@echo "✓ Container started. Use 'make logs' to view output"
 
 # Stop and remove container
